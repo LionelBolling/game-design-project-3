@@ -69,8 +69,8 @@ func _catching(board: Blackboard, delta: float) -> void:
 			_sprinting = true
 			speed = tuning.sprint_speed
 			cues.append(&"scream")
-	elif _distance_to_player(board) <= tuning.caught_range:
-		game_state = BoardTypes.Game.CAUGHT
+	elif _distance_to_player(board) <= tuning.caught_range or _arrived(board):
+		game_state = BoardTypes.Game.CAUGHT # as close as he can get still counts: no softlock
 
 
 func _hunt(board: Blackboard, delta: float) -> void:
@@ -97,7 +97,7 @@ func _hunt(board: Blackboard, delta: float) -> void:
 	elif board.detection == BoardTypes.Detect.HEARD:
 		_investigate(board.last_known_position)
 	elif mode == BoardTypes.Mode.INVESTIGATE:
-		if board.at_target:
+		if _arrived(board):
 			_search_time += delta
 			if _search_time >= tuning.search_time:
 				_patrol(board)
@@ -169,7 +169,7 @@ func _seek(board: Blackboard) -> void:
 
 
 func _seeking(board: Blackboard, delta: float) -> void:
-	if board.at_target:
+	if _arrived(board):
 		var still_there := board.hide_state == BoardTypes.Hide.HIDDEN and board.hide_spot == _seek_spot
 		if still_there:
 			_catch(board)
@@ -192,7 +192,7 @@ func _camp(board: Blackboard) -> void:
 func _camping(board: Blackboard, delta: float) -> void:
 	if board.detection == BoardTypes.Detect.SEEN:
 		_chase(board)
-	elif board.at_target or board.target_unreachable:
+	elif _arrived(board):
 		_camp_time += delta
 		if _camp_time >= tuning.camp_time:
 			_patrol(board)
@@ -227,3 +227,9 @@ func _distance_to_player(board: Blackboard) -> float:
 
 func _in_pit(board: Blackboard) -> bool:
 	return board.hide_state == BoardTypes.Hide.HIDDEN and tuning.pit_spot_ids.has(board.hide_spot)
+
+
+## At the target, or as close as Roaming can get (the ball pit, a spot off the
+## navmesh). Either way he stops walking, so the rules must move on.
+func _arrived(board: Blackboard) -> bool:
+	return board.at_target or board.target_unreachable
