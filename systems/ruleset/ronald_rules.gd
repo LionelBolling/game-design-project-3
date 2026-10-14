@@ -19,6 +19,7 @@ var _sprinting := false
 var _seek_fired := false
 var _seek_spot: StringName = &""
 var _seek_wait := 0.0
+var _camp_time := 0.0
 
 
 func _init(rules_tuning: RonaldTuning) -> void:
@@ -34,6 +35,9 @@ func step(board: Blackboard, delta: float) -> void:
 		return
 	if mode == BoardTypes.Mode.CATCH:
 		_catching(board, delta)
+		return
+	if mode == BoardTypes.Mode.CAMP:
+		_camping(board, delta)
 		return
 	_hunt(board, delta)
 
@@ -62,7 +66,10 @@ func _hunt(board: Blackboard, delta: float) -> void:
 	if board.hide_state == BoardTypes.Hide.EXPOSED or board.hide_spot != _seek_spot:
 		_seek_fired = false
 	var seen := board.detection == BoardTypes.Detect.SEEN
-	if mode == BoardTypes.Mode.CHASE and seen and _distance_to_player(board) <= tuning.catch_range:
+	var hunting_you := mode == BoardTypes.Mode.CHASE or mode == BoardTypes.Mode.SEEK
+	if hunting_you and _in_pit(board):
+		_camp(board)
+	elif mode == BoardTypes.Mode.CHASE and seen and _distance_to_player(board) <= tuning.catch_range:
 		_catch(board)
 	elif seen:
 		_chase(board)
@@ -101,6 +108,9 @@ func _seek(board: Blackboard) -> void:
 	_seek_fired = true
 	_seek_spot = board.hide_spot
 	cues.append(&"whisper")
+	if _in_pit(board):
+		_camp(board)
+		return
 	mode = BoardTypes.Mode.SEEK
 	target = board.player_position
 	var travel_time := board.enemy_position.distance_to(target) / tuning.search_speed
@@ -118,6 +128,24 @@ func _seeking(board: Blackboard, delta: float) -> void:
 		return
 	_seek_wait -= delta
 	speed = 0.0 if _seek_wait > 0.0 else tuning.search_speed
+
+
+## He never enters the ball pit: he walks to the rim (Roaming stops him at the
+## nearest reachable point) and waits there (SYSTEM.md §6 Q3).
+func _camp(board: Blackboard) -> void:
+	mode = BoardTypes.Mode.CAMP
+	target = board.player_position
+	speed = tuning.search_speed
+	_camp_time = 0.0
+
+
+func _camping(board: Blackboard, delta: float) -> void:
+	if board.detection == BoardTypes.Detect.SEEN:
+		_chase(board)
+	elif board.at_target or board.target_unreachable:
+		_camp_time += delta
+		if _camp_time >= tuning.camp_time:
+			_patrol(board)
 
 
 func _catch(board: Blackboard) -> void:
@@ -143,3 +171,7 @@ func _patrol(board: Blackboard) -> void:
 
 func _distance_to_player(board: Blackboard) -> float:
 	return board.enemy_position.distance_to(board.player_position)
+
+
+func _in_pit(board: Blackboard) -> bool:
+	return board.hide_state == BoardTypes.Hide.HIDDEN and tuning.pit_spot_ids.has(board.hide_spot)

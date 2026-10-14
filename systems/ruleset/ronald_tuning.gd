@@ -12,6 +12,9 @@ extends Resource
 @export var search_time := 5.0
 @export var stare_time := 2.0 # silent stare before the sprint
 @export var seek_min_warning := 5.0 # least time between "I see you" and his arrival
+@export var camp_time := 10.0 # waiting at the ball-pit rim
 @export_group("Distances (m)")
 @export var catch_range := 3.0 # chasing this close starts the stare
 @export var caught_range := 0.8 # the sprint reaching this close ends the run
+@export_group("Ball pit")
+@export var pit_spot_ids: Array[StringName] = [&"ball_pit"] # hiding-spot ids he never enters (agree with Lionel)
