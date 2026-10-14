@@ -36,6 +36,9 @@ func step(board: Blackboard, delta: float) -> void:
 	cues.clear()
 	if game_state != BoardTypes.Game.PLAYING:
 		return
+	if board.player_at_exit and board.breaker_on: # escaping beats everything (D-013)
+		game_state = BoardTypes.Game.ESCAPED
+		return
 	if mode == BoardTypes.Mode.DORMANT:
 		_dormant(board)
 		return
