@@ -40,6 +40,18 @@ The first sandbox run showed Ronald seeing the player on frame one: Senses read 
 **D-012 · 2026-10-14 · Rickey · A branch per change, PRs into `main` (supersedes D-004)**
 The team prefers branch work. Each change gets a short-lived branch cut from `main` (`<system>/<NN>-<slug>`), merged through a PR once the suite passes and the game runs. Nobody commits to `main` directly; no stacked PRs. Contract and `systems/core/` changes need Rickey's approval. The web export is never committed on feature branches (binary conflicts): whoever merges a player-visible change re-exports from `main` on a `web/<date>-export` branch. *Affects:* everyone (`AGENTS.md` Rules 6 and 7, `docs/WORKFLOW.md`).
 
+**D-013 · 2026-10-14 · Rickey (Ruleset interview) · Escape: 3 fuses, the breaker, then the exit**
+The player collects 3 fuses, restores the breaker, then leaves through the exit, as in the demo. This deliberately goes against the GDD's inventory cut (decisions outrank the GDD, D-006): the only "inventory" is a fuse count, with no storage or crafting. Ronald stays dormant until the first fuse is picked up. Answers GAME_SPEC Q1. *Affects:* Lionel (fuse and breaker interactions), Aiden (placing the fuses, breaker and exit; lights come on with the breaker), Naomi (Ronald's hidden, dormant body).
+
+**D-014 · 2026-10-14 · Rickey (Ruleset interview) · Ronald is the only monster**
+One monster in v1. His numbers live in a data resource, so a second mascot later is new data, not new code. The board stays single-enemy. Answers GAME_SPEC Q2. *Affects:* everyone.
+
+**D-015 · 2026-10-14 · Rickey (Ruleset interview) · The flashlight never freezes Ronald**
+The demo's freeze-in-the-beam rule is dropped. Whether the flashlight exists is still team question Q4 (Lionel and Aiden); if it stays, it's only light and makes the player easier to spot. *Affects:* Lionel, Aiden.
+
+**D-016 · 2026-10-14 · Rickey (Ruleset interview) · Opening and ending**
+Keep the demo's opening (waking up in the ball pit). When the player escapes, a short non-interactive reveal: the lights come on and a real man in a cheap clown suit stands where Ronald was. Needs a second character model; who makes it is open. Answers GAME_SPEC Q7. *Affects:* Naomi and Aiden (the model), Rickey (game flow).
+
 ## Proposed (need sign-off)
 
 **P-001 · 2026-10-09 · Rickey · Blackboard contract v0.1**
@@ -48,6 +60,17 @@ The team prefers branch work. Each change gets a short-lived branch cut from `ma
 - [ ] Rickey (Ruleset)
 - [ ] Naomi (Roaming)
 - [ ] Aiden (Senses)
+
+**P-002 · 2026-10-14 · Rickey · Contract v0.2: what the Ruleset interview needs**
+From `systems/ruleset/SYSTEM.md` §6. Needs a yes from every owner named below before Rickey changes the board.
+- **`BoardTypes.Mode` gains five modes (eight in all):** `DORMANT` (not active yet; Roaming keeps his body hidden and still), `POSE` (frozen on a bench like a statue), `SEEK` (walking to the player's leaked hiding spot after "I see you"), `CAMP` (waiting at the ball-pit rim) and `CATCH` (the stare, then the sprint). In `DORMANT` and `POSE`, Roaming ignores `target_position` (as in `PATROL`); in `POSE`, `at_target` is true once he's seated.
+- **New Hiding values:** `fuses_collected: int` (0–3) and `breaker_on: bool`, written by Hiding because the player does the picking up. Read by the Ruleset (wake Ronald at the first fuse; escaping needs the breaker) and by display code (HUD, lights). *Needs Lionel's yes.*
+- **New Roaming value:** `target_unreachable: bool`, true when Ronald can't reach `target_position` and went to the nearest reachable point instead (the ball pit). Read by the Ruleset (switch to CAMP). *Needs Naomi's yes.*
+- **A rule, not a value:** Hiding locks the player's controls while `ronald_mode == CATCH`. *Needs Lionel's yes.*
+- [ ] Lionel (Hiding)
+- [ ] Naomi (Roaming)
+- [ ] Aiden (Senses: reads the new modes)
+- [ ] Rickey (Ruleset)
 
 ## Open questions
 
