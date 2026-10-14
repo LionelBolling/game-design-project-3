@@ -42,7 +42,7 @@ First session, or unsure how systems connect: read [`docs/ARCHITECTURE.md`](docs
 
 - **First session on a system:** interview the owner using the questions in their `SYSTEM.md` (§5). **One question at a time**, multiple choice, recommended option first. Record each answer in `SYSTEM.md` §6 as you go.
 - Then write `systems/<system>/PLAN.md` from the template in `WORKFLOW.md`. **No system code until the owner approves `PLAN.md`.**
-- Build **one plan step at a time**: write the test first, implement, run the full suite, tick the box in `PLAN.md`, commit locally, then **stop and report**.
+- Build **one plan step at a time**: write the test first, implement, run the full suite, tick the box in `PLAN.md`, commit on your branch, then **stop and report**.
 - Don't add features that aren't in the approved plan. Put ideas in `PLAN.md` under "Ideas".
 
 ## Rule 5: Test before claiming done
@@ -58,21 +58,30 @@ First session, or unsure how systems connect: read [`docs/ARCHITECTURE.md`](docs
 - Put engine queries (raycasts, navmesh paths, `Input`) behind small methods so tests can replace them.
 - Feel and visuals need the human. Tell them exactly what to try in their test scene or in `systems/core/sandbox/sandbox.tscn` (F6).
 
-## Rule 6: Git: one branch, push only what works
+## Rule 6: Git: a branch per change, PRs into `main`
 
-- **No branches.** Everyone works on `main`.
-- Start every session with `git pull --rebase`.
-- Commit small and often, locally. Messages: `<system>: <what changed>` (for example `hiding: add hide timer`).
-- **Push only when it works locally:** the full suite passes and the game or your test scene runs with your change. Right before pushing, `git pull --rebase`, run the suite again, then push.
-- **Ask the human before `git push`.** Never force-push or rewrite history that's already pushed.
-- A rebase conflict in a file you don't own: stop and tell the human.
+- **`main` is the shared branch, and it must always run:** the full suite passes and Run Project plays. Nobody commits to `main` directly; everything arrives through a pull request (PR).
+- **One short-lived branch per change, cut from an up-to-date `main`:**
+  ```bash
+  git checkout main && git pull
+  git checkout -b <system>/<NN>-<slug>
+  ```
+  `NN` is the `PLAN.md` step number, for example `hiding/02-hide-timer` (the interview and plan go on `<system>/00-plan`). Shared work uses `core/<slug>`, `docs/<slug>` or `web/<slug>`.
+- Commit small and often on your branch. Messages: `<system>: <what changed>` (for example `hiding: add hide timer`).
+- **Before opening a PR:** bring in what merged since you branched (`git pull origin main`), run the full suite, and run the game or your test scene with your change.
+- **One PR per branch, into `main`.** Say what changed, what you tested, and what to try. Merge when those checks pass. A PR that changes the contract or `systems/core/` needs Rickey's approval first.
+- **No stacked PRs** (a PR whose base is another unmerged branch), and never branch off a teammate's branch. If you need someone's unmerged work, keep building against their stub.
+- **After the merge:** delete the branch, `git checkout main && git pull`, and run the game once.
+- **Ask the human before pushing, opening a PR or merging.** Never push to `main` directly, and never force-push.
+- A merge conflict in a file you don't own: stop and tell the human. In the shared logs (`PROGRESS.md`, `DECISIONS.md`), keep both sides.
 
 ## Rule 7: Web export
 
 These rules came from Aiden's earlier `AGENTS.md`.
 
-- The release web export lives in `docs/index.html`, with its generated files beside it.
-- After gameplay or asset changes that players should see, rebuild it and commit `docs/` in the same push:
+- The release web export lives in `docs/index.html`, with its generated files beside it. GitHub Pages serves it from `main`.
+- **Don't commit the export on feature branches.** `docs/index.pck` and `docs/index.wasm` are binary, so two branches that both re-export would always conflict.
+- After a gameplay or asset change that players should see has merged, whoever merged it re-exports from an up-to-date `main` on a `web/<date>-export` branch and opens a one-commit PR:
   ```bash
   godot --headless --path . --export-release Web docs/index.html
   ```
@@ -101,7 +110,7 @@ The other agents don't share your memory. They share the repo.
 - Installing addons, plugins or packages
 - Changing `project.godot`, `export_presets.cfg`, `.gitignore` or anything in `systems/core/`
 - Any contract change
-- `git push`, rebase or reset
+- `git push`, opening or merging a PR, rebase or reset
 - Reading or editing outside this project
 
 ## Never
@@ -109,6 +118,7 @@ The other agents don't share your memory. They share the repo.
 - Commit `.godot/`, `build/`, credentials or personal editor state
 - Edit another owner's files or their section of `PROGRESS.md`
 - Make a system depend on another system's code instead of the board
+- Commit to `main` directly, stack PRs, or merge anything that breaks `main`
 - Skip Rule 5
 
 ## Agent-specific notes

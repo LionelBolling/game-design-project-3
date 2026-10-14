@@ -14,7 +14,7 @@ The four systems talk only through one shared `Blackboard`, with one writer per 
 Everything belongs to one of the four systems: Hiding (Lionel) gets the player body and hiding spots; Ruleset (Rickey) gets win/lose and the shared foundation in `systems/core/`; Roaming (Naomi) gets Ronald's body and pathfinding; Senses (Aiden) gets the level and lighting. *Affects:* everyone (`AGENTS.md`).
 
 **D-004 · 2026-10-09 · Rickey · No branches; push only what works**
-Everyone works on `main`. Pull with rebase before working, commit small, and push only after the full suite passes and the change runs locally. *Affects:* everyone (`AGENTS.md` Rule 6).
+Everyone works on `main`. Pull with rebase before working, commit small, and push only after the full suite passes and the change runs locally. *Affects:* everyone (`AGENTS.md` Rule 6). **Superseded by D-012.**
 
 **D-005 · 2026-10-09 · Rickey · Aiden's mock game is reference only**
 The mock (`scripts/`, `scenes/`, `shaders/`, `tools/`) stays as a playable reference and as the current web build. The real game is built in `systems/`, borrowing the mock's assets, level import and performance tricks. *Affects:* Aiden especially.
@@ -36,6 +36,9 @@ GUT is copied from Project 2 into `addons/gut/` and run headless (`AGENTS.md` Ru
 
 **D-011 · 2026-10-09 · Rickey (Claude Code) · Starting values go in `setup()`**
 The first sandbox run showed Ronald seeing the player on frame one: Senses read his default position before Roaming had placed him. The Director now runs `setup(board)` for every system, in order, before the first frame. `tests/core/test_stub_pipeline.gd` guards this. *Affects:* everyone writing a system.
+
+**D-012 · 2026-10-14 · Rickey · A branch per change, PRs into `main` (supersedes D-004)**
+The team prefers branch work. Each change gets a short-lived branch cut from `main` (`<system>/<NN>-<slug>`), merged through a PR once the suite passes and the game runs. Nobody commits to `main` directly; no stacked PRs. Contract and `systems/core/` changes need Rickey's approval. The web export is never committed on feature branches (binary conflicts): whoever merges a player-visible change re-exports from `main` on a `web/<date>-export` branch. *Affects:* everyone (`AGENTS.md` Rules 6 and 7, `docs/WORKFLOW.md`).
 
 ## Proposed (need sign-off)
 
