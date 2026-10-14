@@ -22,6 +22,8 @@ const OWNERS: Dictionary[StringName, StringName] = {
 	&"hide_time": &"hiding",
 	&"location_leaked": &"hiding",
 	&"player_at_exit": &"hiding",
+	&"fuses_collected": &"hiding",
+	&"breaker_on": &"hiding",
 	# Enemy Senses (Aiden)
 	&"detection": &"senses",
 	&"last_known_position": &"senses",
@@ -34,6 +36,7 @@ const OWNERS: Dictionary[StringName, StringName] = {
 	&"enemy_position": &"roaming",
 	&"enemy_velocity": &"roaming",
 	&"at_target": &"roaming",
+	&"target_unreachable": &"roaming",
 }
 
 ## Who is writing right now. The Director sets it; tests set it to ANY.
@@ -83,6 +86,18 @@ var player_at_exit := false:
 	set(value):
 		if _may_write(&"player_at_exit"):
 			player_at_exit = value
+
+## How many fuses the player has picked up, 0 to 3 (D-013).
+var fuses_collected := 0:
+	set(value):
+		if _may_write(&"fuses_collected"):
+			fuses_collected = value
+
+## True once the player has restored the breaker (needs all 3 fuses).
+var breaker_on := false:
+	set(value):
+		if _may_write(&"breaker_on"):
+			breaker_on = value
 
 # --- Enemy Senses (Aiden) ----------------------------------------------------
 
@@ -138,11 +153,18 @@ var enemy_velocity := Vector3.ZERO:
 		if _may_write(&"enemy_velocity"):
 			enemy_velocity = value
 
-## True when Ronald has reached target_position.
+## True when Ronald has reached target_position (in POSE: once he's seated).
 var at_target := false:
 	set(value):
 		if _may_write(&"at_target"):
 			at_target = value
+
+## True when Ronald can't reach target_position (the ball pit) and went to
+## the nearest reachable point instead.
+var target_unreachable := false:
+	set(value):
+		if _may_write(&"target_unreachable"):
+			target_unreachable = value
 
 
 ## Every value, in contract order. Used by the debug overlay.
