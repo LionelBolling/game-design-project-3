@@ -98,4 +98,4 @@ One at a time, multiple choice, recommended option first. Recommendations come f
 
 ## 11. Done means
 
-`docs/WORKFLOW.md` "Done means": the tests pass, it works in your test scene with the other three as stubs, it's pushed, and `PROGRESS.md` is updated.
+`docs/WORKFLOW.md` "Done means": the tests pass, it works in your test scene with the other three as stubs, it's merged into `main` through a PR, and `PROGRESS.md` is updated.
