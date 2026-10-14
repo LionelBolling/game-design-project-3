@@ -80,7 +80,7 @@ func run() -> void:
 	check(game.ambient.stream is AudioStreamMP3 and game.ambient.stream.loop, "Supplied soundtrack loads and loops")
 	check(game.world.find_children("*", "Label3D", true, false).is_empty(), "Closing checklist sign is removed")
 	check(game.sounds.has("pickup") and game.sounds.pickup.stream != null, "Menu pickup click sound is loaded")
-	check(game.sounds.has("land") and game.sounds.land.stream is AudioStreamWAV, "Landing effect is loaded")
+	check(not game.sounds.has("step") and not game.sounds.has("land") and not game.sounds.has("breath"), "Removed footsteps and intro whoosh are not loaded")
 	check(game.hud.home_panel.visible and game.hud.home_panel.find_children("*", "Button", true, false).size() == 3, "Home has Play, Options, Exit game")
 	game.hud.show_menu("options_home")
 	check(game.hud.options_panel.visible and game.hud.quality_button != null, "Home Options shows settings")
@@ -103,6 +103,15 @@ func run() -> void:
 	check(game.player.camera.position.y < 1.1, "Player eye height fits the tables")
 	check(game.player.flashlight_on, "Opening automatically turns on flashlight")
 	check(game.player.hand.position.distance_to(game.player.hand_home) < 0.01, "Flashlight settles in hand")
+	check(game.stalker.clown != null and game.stalker.animation.is_playing(), "Clown model and imported animation load")
+	game.player.position = Vector3(-30, 0.12, -20)
+	game.stalker.awaken()
+	game.stalker.grace = 0
+	var patrol_start: Vector3 = game.stalker.position
+	await frames(90)
+	check(game.stalker.position.distance_to(patrol_start) > 0.5, "Awakened clown patrols the map")
+	game.stalker.active = false
+	game.player.position = game.world.SPAWN
 	await key(KEY_F)
 	check(not game.player.flashlight_on, "F switches flashlight off")
 	var battery: float = game.player.battery
@@ -130,19 +139,14 @@ func run() -> void:
 	await key(KEY_ESCAPE)
 	check(game.get_tree().paused and game.hud.menu_mode == "pause", "Escape opens pause menu")
 	game.pause_game(false)
-	var landing_impacts: Array[float] = []
-	game.player.landed.connect(func(impact_speed: float): landing_impacts.append(impact_speed))
 	await frames(5)
 	Input.action_press("jump")
 	await frames(1)
 	Input.action_release("jump")
 	await frames(75)
-	check(landing_impacts.size() == 1 and landing_impacts[0] > 3.0, "Jump makes one landing sound")
-	landing_impacts.clear()
 	game.player.position = Vector3(5, 3.0, -1)
 	game.player.velocity = Vector3.ZERO
 	await frames(80)
-	check(landing_impacts.size() == 1 and landing_impacts[0] > 7.0, "Fall makes one stronger landing sound")
 	game.player.position = before
 	game.player.velocity = Vector3.ZERO
 	await frames(5)

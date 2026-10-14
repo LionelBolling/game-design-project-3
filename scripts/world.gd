@@ -3,6 +3,11 @@ const Geo = preload("res://scripts/geometry.gd")
 const DINER = preload("res://Blender models/ronalds.glb")
 const PLAY_PLACE = preload("res://Blender models/PLay place.glb")
 const APPLIANCES = preload("res://Blender models/appliances.glb")
+const PALETTE_RED := Color("#731F24")
+const PALETTE_GOLD := Color("#B39839")
+const PALETTE_CREAM := Color("#C9C1A5")
+const PALETTE_CHARCOAL := Color("#242522")
+const PALETTE_SAGE := Color("#91CBA5")
 
 # Landmarks use the new Blender map's coordinates (metres).
 const SPAWN := Vector3(8, 0.3, -10)
@@ -18,7 +23,6 @@ var obstacles: Array[AABB] = []
 var nav := AStarGrid2D.new()
 var exit_door: Node3D
 var exit_light: OmniLight3D
-var flicker_light: OmniLight3D
 var batch_count := 0
 var source_mesh_count := 0
 var ball_count := 3600
@@ -26,6 +30,9 @@ var ball_instances: MultiMesh
 var ball_origins: Array[Vector3] = []
 var ball_positions: Array[Vector3] = []
 var ball_active: Dictionary = {}
+var overhead_flicker_lights: Array[OmniLight3D] = []
+var overhead_flicker_offsets: Array[float] = []
+var flicker_clock := 0.0
 var powered_lights: Array[OmniLight3D] = []
 var powered_fixtures: Array[MeshInstance3D] = []
 var _groups: Dictionary = {}
@@ -40,10 +47,13 @@ func _ready() -> void:
 	_shell_and_passages()
 	_ball_pit()
 	_decorate()
+	_dust_particles()
+	_apply_environment_palette()
 	_navigation()
 
 func _process(delta: float) -> void:
 	_animate_balls(delta)
+	_animate_overhead_lights(delta)
 
 func _import_diner() -> void:
 	var imported := DINER.instantiate()
@@ -225,6 +235,35 @@ func _batch(instance: MeshInstance3D) -> void:
 			_groups[key] = st
 		_groups[key].append_from(instance.mesh, surface, instance.global_transform)
 
+func _apply_environment_palette() -> void:
+	for node in find_children("*", "MeshInstance3D", true, false):
+		var instance := node as MeshInstance3D
+		if exit_door.is_ancestor_of(instance):
+			continue
+		for surface in instance.mesh.get_surface_count():
+			var material := instance.get_active_material(surface) as StandardMaterial3D
+			if material == null:
+				continue
+			var palette_material := material.duplicate() as StandardMaterial3D
+			var color := material.albedo_color
+			var palette_color := _palette_color(color)
+			palette_color.a = color.a
+			palette_material.albedo_color = palette_color
+			instance.set_surface_override_material(surface, palette_material)
+
+func _palette_color(source: Color) -> Color:
+	var darkest := mini(mini(source.r8, source.g8), source.b8)
+	var lightest := maxi(maxi(source.r8, source.g8), source.b8)
+	var luminance := source.r * 0.2126 + source.g * 0.7152 + source.b * 0.0722
+	var saturation := float(lightest - darkest) / maxf(float(lightest), 1.0)
+	if saturation >= 0.35 and source.r >= source.g * 1.35 and source.r >= source.b * 1.3:
+		return PALETTE_RED
+	if saturation >= 0.35 and source.r >= source.g and source.g > source.b * 1.2:
+		return PALETTE_GOLD
+	if saturation >= 0.45 and source.g >= source.r * 1.2 and source.g >= source.b * 1.1:
+		return PALETTE_SAGE
+	return PALETTE_CREAM if luminance >= 0.48 else PALETTE_CHARCOAL
+
 func solid(pos: Vector3, size: Vector3, blocks_navigation: bool = true) -> void:
 	var body := StaticBody3D.new()
 	var shape := CollisionShape3D.new()
@@ -337,7 +376,7 @@ func _ball_pit() -> void:
 	balls.instance_count = ball_count
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7319
-	var colors := [Color("b64c3e"), Color("c7aa3f"), Color("3364a0")]
+	var colors := [PALETTE_RED, PALETTE_GOLD, PALETTE_SAGE]
 	for i in ball_count:
 		var layer := i / 1800
 		var cell := i % 1800
@@ -399,15 +438,15 @@ func _decorate() -> void:
 	Geo.box(exit_door, Vector3(0.1, 1.4, 1.7), Vector3(0.08, 0.08, 2.9), Geo.material(Color("bf9b50"), 0.6))
 	solid(Vector3(-35.9, 1.6, 0), Vector3(0.15, 3.2, 3.4))
 	exit_light = _light(Vector3(-33.8, 3, 0), Color("79ba98"), 1.5, 8)
-	flicker_light = _light(Vector3(-10, 3.9, 1), Color("c7a77d"), 1.1, 13)
-	_light(Vector3(10, 4, -12), Color("6c9db9"), 1.5, 15)
-	_light(Vector3(-8, 4, -16), Color("b67d63"), 1.0, 12)
-	_light(Vector3(13, 4, 2), Color("d7aa70"), 1.1, 13)
-	_light(Vector3(23.5, 2.8, 16), Color("90c5d9"), 1.5, 8)
-	_light(Vector3(-23, 3.8, 6), Color("819fa2"), 0.85, 10)
-	_light(Vector3(-23, 3.4, 18), Color("94b5a3"), 1.1, 9)
+	_register_flicker_light(_light(Vector3(-10, 3.9, 1), PALETTE_CREAM, 0.45, 13))
+	_register_flicker_light(_light(Vector3(10, 4, -12), PALETTE_CREAM, 0.42, 15))
+	_register_flicker_light(_light(Vector3(-8, 4, -16), PALETTE_RED, 0.38, 12))
+	_light(Vector3(13, 4, 2), PALETTE_GOLD, 0.42, 13)
+	_light(Vector3(23.5, 2.8, 16), PALETTE_SAGE, 0.5, 8)
+	_light(Vector3(-23, 3.8, 6), PALETTE_CREAM, 0.32, 10)
+	_light(Vector3(-23, 3.4, 18), PALETTE_CREAM, 0.38, 9)
 	for x in [-9, 8, 26]:
-		_light(Vector3(x, 4.2, 16), Color("abbdaf"), 1.05, 12)
+		_light(Vector3(x, 4.2, 16), PALETTE_CREAM, 0.4, 12)
 	for x in [-12, 0, 12, 26]:
 		for z in [-2, 16]:
 			powered_fixtures.append(Geo.box(self, Vector3(x, 5.34, z), Vector3(2.8, 0.12, 0.6), Geo.material(Color("777a78"))))
@@ -422,6 +461,55 @@ func _decorate() -> void:
 		Geo.box(self, Vector3(-36.3, 2, z), Vector3(0.08, 2.15, 5.7), dark)
 		Geo.box(self, Vector3(-36.4, 2, z), Vector3(0.1, 2.15, 0.12), gold)
 	_light(Vector3(-40, 4, 0), Color("e6ac65"), 2.8, 18)
+
+func _register_flicker_light(light: OmniLight3D) -> void:
+	overhead_flicker_lights.append(light)
+	overhead_flicker_offsets.append(randf_range(0.0, 6.0))
+
+func _animate_overhead_lights(delta: float) -> void:
+	flicker_clock += delta
+	for i in overhead_flicker_lights.size():
+		var light := overhead_flicker_lights[i]
+		if not light.visible:
+			continue
+		var phase := flicker_clock + overhead_flicker_offsets[i]
+		var dropout := fposmod(phase, 5.7) < 0.09 or fposmod(phase + 1.8, 8.3) < 0.06
+		var shimmer := 0.5 + 0.5 * sin(phase * 9.0 + sin(phase * 2.7))
+		light.light_energy = 0.0 if dropout or shimmer < 0.12 else 0.24 + shimmer * 0.22
+
+func _dust_particles() -> void:
+	var particle_mesh := QuadMesh.new()
+	particle_mesh.size = Vector2(0.035, 0.035)
+	var dust_material := StandardMaterial3D.new()
+	dust_material.albedo_color = Color(PALETTE_CREAM.r, PALETTE_CREAM.g, PALETTE_CREAM.b, 0.28)
+	dust_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	dust_material.shading_mode = BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	dust_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	particle_mesh.material = dust_material
+	var dust := CPUParticles3D.new()
+	dust.name = "AirborneDust"
+	dust.position = Vector3(0, 2.5, 0)
+	dust.amount = 1000
+	dust.lifetime = 18.0
+	dust.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	dust.emission_box_extents = Vector3(34, 2.1, 23)
+	dust.direction = Vector3(0.15, 1.0, 0.1)
+	dust.spread = 180.0
+	dust.initial_velocity_min = 0.04
+	dust.initial_velocity_max = 0.16
+	dust.gravity = Vector3(0, 0.015, 0)
+	dust.linear_accel_min = -0.025
+	dust.linear_accel_max = 0.025
+	dust.randomness = 0.8
+	dust.damping_min = 0.01
+	dust.damping_max = 0.04
+	dust.scale_amount_min = 0.45
+	dust.scale_amount_max = 1.0
+	dust.color = Color(1, 1, 1, 0.7)
+	dust.mesh = particle_mesh
+	dust.visibility_aabb = AABB(Vector3(-36, -3, -25), Vector3(72, 9, 50))
+	dust.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(dust)
 
 func _light(pos: Vector3, color: Color, energy: float, radius: float) -> OmniLight3D:
 	var light := OmniLight3D.new()

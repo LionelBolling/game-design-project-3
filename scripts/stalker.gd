@@ -1,45 +1,39 @@
 extends Node3D
-const Geo = preload("res://scripts/geometry.gd")
+const CLOWN_SCENE = preload("res://Blender models/ps1-clown.glb")
+const CHASE_DISTANCE := 12.0
 var active := false
 var player: CharacterBody3D
 var world: Node3D
-var torso: Node3D
-var left_arm: Node3D
-var right_arm: Node3D
+var clown: Node3D
+var animation: AnimationPlayer
 var path := PackedVector2Array()
 var path_timer := 0.0
 var clock := 0.0
 var frozen := false
 var grace := 4.0
 var speed := 1.65
+var patrol_target := Vector3.ZERO
+var patrol_target_valid := false
+var rng := RandomNumberGenerator.new()
 signal caught
 
 func _ready() -> void:
-	var soot := Geo.material(Color("14191a"))
-	var old_fabric := Geo.material(Color("46473b"))
-	var eyes := Geo.material(Color("decba2"), 0, 1.5)
-	torso = Node3D.new()
-	add_child(torso)
-	var body := Geo.sphere(torso, Vector3(0, 1.15, 0), 0.43, soot)
-	body.scale = Vector3(1, 1.6, 0.65)
-	Geo.sphere(torso, Vector3(0, 2.03, 0), 0.38, old_fabric)
-	Geo.sphere(torso, Vector3(-0.3, 2.35, 0), 0.17, old_fabric)
-	Geo.sphere(torso, Vector3(0.3, 2.35, 0), 0.17, old_fabric)
-	Geo.sphere(torso, Vector3(-0.13, 2.09, 0.33), 0.052, eyes)
-	Geo.sphere(torso, Vector3(0.13, 2.09, 0.33), 0.052, eyes)
-	Geo.box(torso, Vector3(0, 1.88, 0.33), Vector3(0.3, 0.08, 0.06), soot)
-	left_arm = _limb(torso, Vector3(-0.47, 1.55, 0), soot)
-	right_arm = _limb(torso, Vector3(0.47, 1.55, 0), soot)
-	Geo.cylinder(torso, Vector3(-0.2, 0.35, 0), 0.13, 0.7, soot)
-	Geo.cylinder(torso, Vector3(0.2, 0.35, 0), 0.13, 0.7, soot)
+	rng.randomize()
+	clown = CLOWN_SCENE.instantiate() as Node3D
+	if clown == null:
+		push_error("The PS1 clown scene could not be instantiated.")
+		return
+	clown.scale = Vector3.ONE * 0.4
+	clown.rotation.y = PI
+	add_child(clown)
+	animation = clown.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if animation == null or animation.get_animation_list().is_empty():
+		push_error("The PS1 clown scene has no imported animation.")
+		return
+	var animation_name := animation.get_animation_list()[0]
+	animation.get_animation(animation_name).loop_mode = Animation.LOOP_LINEAR
+	animation.play(animation_name)
 	visible = false
-
-func _limb(parent: Node3D, pos: Vector3, mat: Material) -> Node3D:
-	var pivot := Node3D.new()
-	pivot.position = pos
-	parent.add_child(pivot)
-	Geo.cylinder(pivot, Vector3(0, -0.45, 0), 0.1, 0.95, mat)
-	return pivot
 
 func awaken() -> void:
 	if active:
@@ -48,33 +42,68 @@ func awaken() -> void:
 	active = true
 	visible = true
 	grace = 4.0
+	path.clear()
+	patrol_target_valid = false
+	path_timer = 0.0
 
 func _physics_process(delta: float) -> void:
 	if not active or not player.control_enabled:
 		return
 	clock += delta
 	grace = maxf(0, grace - delta)
-	frozen = player.beam_hits(global_position + Vector3(0, 1.6, 0))
-	var target := player.global_position
-	target.y = global_position.y
-	if target.distance_to(global_position) > 0.1:
-		look_at(target, Vector3.UP, true)
+	var beam_freezing: bool = player.beam_hits(global_position + Vector3(0, 1.25, 0))
+	if beam_freezing != frozen:
+		frozen = beam_freezing
+		if frozen:
+			animation.pause()
+		else:
+			animation.play()
+	var player_offset := Vector2(player.global_position.x - global_position.x, player.global_position.z - global_position.z)
+	var chasing := player_offset.length() <= CHASE_DISTANCE
 	if frozen or grace > 0:
 		return
-	path_timer -= delta
-	if path_timer <= 0:
-		path_timer = 0.5
-		path = world.route(global_position, player.global_position)
-		if path.size() > 1:
-			path.remove_at(0)
+	if chasing:
+		path_timer -= delta
+		if path_timer <= 0:
+			path_timer = 0.65
+			path = world.route(global_position, player.global_position)
+			if path.size() > 1:
+				path.remove_at(0)
+			else:
+				path.clear()
+	elif not patrol_target_valid or global_position.distance_to(patrol_target) < 0.7:
+		path_timer -= delta
+		if path_timer <= 0:
+			path_timer = 1.0
+			_choose_patrol_target()
+	elif path.is_empty():
+		patrol_target_valid = false
+		path_timer = 0.0
 	if not path.is_empty():
-		var waypoint := Vector3(path[0].x, 0.12, path[0].y)
+		var waypoint := Vector3(path[0].x, world.STALKER_SPAWN.y, path[0].y)
+		var facing := waypoint - global_position
+		facing.y = 0
+		if facing.length_squared() > 0.01:
+			look_at(global_position + facing, Vector3.UP)
 		position = position.move_toward(waypoint, speed * delta)
 		if position.distance_to(waypoint) < 0.08:
 			path.remove_at(0)
-	torso.position.y = sin(clock * 7) * 0.035
-	left_arm.rotation.x = sin(clock * 5) * 0.24
-	right_arm.rotation.x = -sin(clock * 5) * 0.24
-	if global_position.distance_to(player.global_position) < 0.85:
+	if player_offset.length() < 0.85:
 		active = false
 		caught.emit()
+
+func _choose_patrol_target() -> void:
+	for attempt in 16:
+		var candidate := Vector3(rng.randf_range(-33.0, 33.0), world.STALKER_SPAWN.y, rng.randf_range(-22.0, 22.0))
+		var candidate_path: PackedVector2Array = world.route(global_position, candidate)
+		if candidate_path.size() < 2:
+			continue
+		var destination := Vector3(candidate_path[-1].x, world.STALKER_SPAWN.y, candidate_path[-1].y)
+		if global_position.distance_to(destination) < 5.0:
+			continue
+		path = candidate_path
+		path.remove_at(0)
+		patrol_target = destination
+		patrol_target_valid = true
+		return
+	patrol_target_valid = false
