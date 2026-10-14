@@ -11,6 +11,8 @@ var speed := 0.0
 var game_state: BoardTypes.Game = BoardTypes.Game.PLAYING
 ## One-off cues raised this frame: &"honk", &"whisper", &"scream".
 var cues: Array[StringName] = []
+## Returns 0 to 1. Tests replace it to make posing predictable.
+var roll: Callable = func() -> float: return randf()
 
 var _unseen_time := 0.0
 var _search_time := 0.0
@@ -20,6 +22,10 @@ var _seek_fired := false
 var _seek_spot: StringName = &""
 var _seek_wait := 0.0
 var _camp_time := 0.0
+var _patrol_time := 0.0
+var _pose_length := 0.0
+var _pose_time := 0.0
+var _wake_time := 0.0
 
 
 func _init(rules_tuning: RonaldTuning) -> void:
@@ -38,6 +44,9 @@ func step(board: Blackboard, delta: float) -> void:
 		return
 	if mode == BoardTypes.Mode.CAMP:
 		_camping(board, delta)
+		return
+	if mode == BoardTypes.Mode.POSE:
+		_posing(board, delta)
 		return
 	_hunt(board, delta)
 
@@ -90,6 +99,44 @@ func _hunt(board: Blackboard, delta: float) -> void:
 			if _search_time >= tuning.search_time:
 				_patrol(board)
 	else:
+		var was_patrolling := mode == BoardTypes.Mode.PATROL
+		_patrol(board)
+		if was_patrolling: # one mode change per frame
+			_maybe_pose(delta)
+
+
+## Every pose_check_every seconds of patrol, a pose_chance roll to sit on a
+## bench like a statue (SYSTEM.md §6 Q9). Roaming picks the bench.
+func _maybe_pose(delta: float) -> void:
+	_patrol_time += delta
+	if _patrol_time < tuning.pose_check_every:
+		return
+	_patrol_time = 0.0
+	if roll.call() < tuning.pose_chance:
+		mode = BoardTypes.Mode.POSE
+		speed = tuning.patrol_speed
+		_pose_length = lerpf(tuning.pose_time_min, tuning.pose_time_max, roll.call())
+		_pose_time = 0.0
+		_wake_time = 0.0
+
+
+## Walking to the bench he reacts normally; seated he ignores sight and sound,
+## and only an exposed player within pose_wake_range wakes him.
+func _posing(board: Blackboard, delta: float) -> void:
+	if not board.at_target:
+		if board.detection != BoardTypes.Detect.NONE:
+			_hunt(board, delta)
+		return
+	var close := _distance_to_player(board) <= tuning.pose_wake_range
+	if board.hide_state == BoardTypes.Hide.EXPOSED and close:
+		_wake_time += delta
+		if _wake_time >= tuning.pose_wake_time:
+			_chase(board)
+			return
+	else:
+		_wake_time = 0.0
+	_pose_time += delta
+	if _pose_time >= _pose_length:
 		_patrol(board)
 
 
@@ -164,6 +211,8 @@ func _investigate(at: Vector3) -> void:
 
 
 func _patrol(board: Blackboard) -> void:
+	if mode != BoardTypes.Mode.PATROL:
+		_patrol_time = 0.0
 	mode = BoardTypes.Mode.PATROL
 	target = board.enemy_position # ignored by Roaming in PATROL
 	speed = tuning.patrol_speed

@@ -16,5 +16,12 @@ extends Resource
 @export_group("Distances (m)")
 @export var catch_range := 3.0 # chasing this close starts the stare
 @export var caught_range := 0.8 # the sprint reaching this close ends the run
+@export_group("Posing")
+@export var pose_check_every := 45.0 # seconds of patrol between rolls ("1 in 4 patrol loops")
+@export var pose_chance := 0.25
+@export var pose_time_min := 20.0
+@export var pose_time_max := 40.0
+@export var pose_wake_range := 1.0 # an exposed player this close wakes him
+@export var pose_wake_time := 1.0
 @export_group("Ball pit")
 @export var pit_spot_ids: Array[StringName] = [&"ball_pit"] # hiding-spot ids he never enters (agree with Lionel)
