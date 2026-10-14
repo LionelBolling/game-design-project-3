@@ -10,6 +10,8 @@ func before_each() -> void:
 	rules = RonaldRules.new(RonaldTuning.new())
 	board.player_position = Vector3(0, 0, 0)
 	board.enemy_position = Vector3(10, 0, 0)
+	board.fuses_collected = 1
+	rules.step(board, 0.0) # wakes from DORMANT (one mode change per frame)
 
 
 func test_starts_patrolling_at_patrol_speed() -> void:

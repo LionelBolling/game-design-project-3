@@ -5,7 +5,7 @@ extends RefCounted
 ## RulesetSystem copies the results onto the board each frame.
 
 var tuning: RonaldTuning
-var mode: BoardTypes.Mode = BoardTypes.Mode.PATROL
+var mode: BoardTypes.Mode = BoardTypes.Mode.DORMANT
 var target := Vector3.ZERO
 var speed := 0.0
 var game_state: BoardTypes.Game = BoardTypes.Game.PLAYING
@@ -18,14 +18,22 @@ var _search_time := 0.0
 
 func _init(rules_tuning: RonaldTuning) -> void:
 	tuning = rules_tuning
-	speed = tuning.patrol_speed
 
 
 func step(board: Blackboard, delta: float) -> void:
 	cues.clear()
 	if game_state != BoardTypes.Game.PLAYING:
 		return
+	if mode == BoardTypes.Mode.DORMANT:
+		_dormant(board)
+		return
 	_hunt(board, delta)
+
+
+## Asleep until the player picks up the first fuse (D-013).
+func _dormant(board: Blackboard) -> void:
+	if board.fuses_collected >= 1:
+		_patrol(board)
 
 
 func _hunt(board: Blackboard, delta: float) -> void:
