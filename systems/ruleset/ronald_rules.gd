@@ -16,6 +16,9 @@ var _unseen_time := 0.0
 var _search_time := 0.0
 var _stare_time := 0.0
 var _sprinting := false
+var _seek_fired := false
+var _seek_spot: StringName = &""
+var _seek_wait := 0.0
 
 
 func _init(rules_tuning: RonaldTuning) -> void:
@@ -55,11 +58,18 @@ func _catching(board: Blackboard, delta: float) -> void:
 
 
 func _hunt(board: Blackboard, delta: float) -> void:
+	# A leak fires once per visit; a visit ends when the player comes out or changes spots.
+	if board.hide_state == BoardTypes.Hide.EXPOSED or board.hide_spot != _seek_spot:
+		_seek_fired = false
 	var seen := board.detection == BoardTypes.Detect.SEEN
 	if mode == BoardTypes.Mode.CHASE and seen and _distance_to_player(board) <= tuning.catch_range:
 		_catch(board)
 	elif seen:
 		_chase(board)
+	elif board.location_leaked and not _seek_fired:
+		_seek(board)
+	elif mode == BoardTypes.Mode.SEEK:
+		_seeking(board, delta)
 	elif mode == BoardTypes.Mode.CHASE:
 		target = board.last_known_position
 		_unseen_time += delta
@@ -83,6 +93,31 @@ func _chase(board: Blackboard) -> void:
 	target = board.player_position
 	speed = tuning.chase_speed
 	_unseen_time = 0.0
+
+
+## "I see you": whisper, then walk to the spot, arriving no sooner than
+## seek_min_warning seconds later (SYSTEM.md §6 Q4).
+func _seek(board: Blackboard) -> void:
+	_seek_fired = true
+	_seek_spot = board.hide_spot
+	cues.append(&"whisper")
+	mode = BoardTypes.Mode.SEEK
+	target = board.player_position
+	var travel_time := board.enemy_position.distance_to(target) / tuning.search_speed
+	_seek_wait = maxf(0.0, tuning.seek_min_warning - travel_time)
+	speed = 0.0 if _seek_wait > 0.0 else tuning.search_speed
+
+
+func _seeking(board: Blackboard, delta: float) -> void:
+	if board.at_target:
+		var still_there := board.hide_state == BoardTypes.Hide.HIDDEN and board.hide_spot == _seek_spot
+		if still_there:
+			_catch(board)
+		else:
+			_investigate(target)
+		return
+	_seek_wait -= delta
+	speed = 0.0 if _seek_wait > 0.0 else tuning.search_speed
 
 
 func _catch(board: Blackboard) -> void:
