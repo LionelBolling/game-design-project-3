@@ -14,6 +14,8 @@ var cues: Array[StringName] = []
 
 var _unseen_time := 0.0
 var _search_time := 0.0
+var _stare_time := 0.0
+var _sprinting := false
 
 
 func _init(rules_tuning: RonaldTuning) -> void:
@@ -27,6 +29,9 @@ func step(board: Blackboard, delta: float) -> void:
 	if mode == BoardTypes.Mode.DORMANT:
 		_dormant(board)
 		return
+	if mode == BoardTypes.Mode.CATCH:
+		_catching(board, delta)
+		return
 	_hunt(board, delta)
 
 
@@ -36,8 +41,24 @@ func _dormant(board: Blackboard) -> void:
 		_patrol(board)
 
 
+## The stare, then the sprint (SYSTEM.md §6 Q6). Nothing interrupts it.
+func _catching(board: Blackboard, delta: float) -> void:
+	target = board.player_position
+	if not _sprinting:
+		_stare_time += delta
+		if _stare_time >= tuning.stare_time:
+			_sprinting = true
+			speed = tuning.sprint_speed
+			cues.append(&"scream")
+	elif _distance_to_player(board) <= tuning.caught_range:
+		game_state = BoardTypes.Game.CAUGHT
+
+
 func _hunt(board: Blackboard, delta: float) -> void:
-	if board.detection == BoardTypes.Detect.SEEN:
+	var seen := board.detection == BoardTypes.Detect.SEEN
+	if mode == BoardTypes.Mode.CHASE and seen and _distance_to_player(board) <= tuning.catch_range:
+		_catch(board)
+	elif seen:
 		_chase(board)
 	elif mode == BoardTypes.Mode.CHASE:
 		target = board.last_known_position
@@ -64,6 +85,14 @@ func _chase(board: Blackboard) -> void:
 	_unseen_time = 0.0
 
 
+func _catch(board: Blackboard) -> void:
+	mode = BoardTypes.Mode.CATCH
+	target = board.player_position
+	speed = 0.0
+	_stare_time = 0.0
+	_sprinting = false
+
+
 func _investigate(at: Vector3) -> void:
 	mode = BoardTypes.Mode.INVESTIGATE
 	target = at
@@ -75,3 +104,7 @@ func _patrol(board: Blackboard) -> void:
 	mode = BoardTypes.Mode.PATROL
 	target = board.enemy_position # ignored by Roaming in PATROL
 	speed = tuning.patrol_speed
+
+
+func _distance_to_player(board: Blackboard) -> float:
+	return board.enemy_position.distance_to(board.player_position)
