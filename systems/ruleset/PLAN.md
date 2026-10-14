@@ -1,6 +1,6 @@
 # Enemy Ruleset plan
 
-Owner: Rickey · Approved: not yet
+Owner: Rickey · Approved: 2026-10-14 (Rickey: build it in this session, on one branch)
 
 > **Agents:** build one step at a time (`AGENTS.md` Rule 4). Each step gets its own branch from an up-to-date `main` (named in the step), its own PR, and a stop-and-report at the end. The design behind every step is `systems/ruleset/SYSTEM.md` §6; the team-wide parts are `docs/DECISIONS.md` D-013 to D-016 and P-002.
 
