@@ -1,12 +1,10 @@
 extends CharacterBody3D
 const Geo = preload("res://scripts/geometry.gd")
 signal flashlight_changed(enabled: bool)
-signal step
-signal landed(impact_speed: float)
 
 const WALK_SPEED := 2.5
 const RUN_SPEED := 4.2
-const BATTERY_DRAIN := 0.42 # Almost four minutes per full charge.
+const BATTERY_DRAIN := 0.84
 var camera: Camera3D
 var hand: Node3D
 var lamp: SpotLight3D
@@ -21,7 +19,6 @@ var sensitivity := 0.0022
 var reduce_motion := false
 var pitch := 0.0
 var bob_time := 0.0
-var step_clock := 0.0
 var toggle_cooldown := 0.0
 var beam_time := 0.0
 var hand_home := Vector3(0.26, -0.24, -0.42)
@@ -88,10 +85,10 @@ func _flashlight_model() -> void:
 	lamp = SpotLight3D.new()
 	lamp.name = "Beam"
 	lamp.position = Vector3(0.08, -0.04, -0.25)
-	lamp.spot_range = 22
+	lamp.spot_range = 16
 	lamp.spot_angle = 29
 	lamp.spot_angle_attenuation = 1.8
-	lamp.light_energy = 5.5
+	lamp.light_energy = 3.8
 	lamp.light_color = Color("ede4ca")
 	lamp.shadow_enabled = true
 	lamp.shadow_bias = 0.03
@@ -99,8 +96,8 @@ func _flashlight_model() -> void:
 	camera.add_child(lamp)
 	spill = OmniLight3D.new()
 	spill.position = Vector3(0.1, -0.1, -0.4)
-	spill.omni_range = 2.4
-	spill.light_energy = 0.22
+	spill.omni_range = 1.8
+	spill.light_energy = 0.16
 	spill.light_color = Color("d2c5a5")
 	spill.visible = false
 	camera.add_child(spill)
@@ -183,7 +180,7 @@ func _physics_process(delta: float) -> void:
 		if battery <= 0:
 			set_flashlight(false)
 		# Gentle low-battery instability, never a full-screen strobe.
-		lamp.light_energy = 5.5 if battery > 18 else 3.8 + sin(beam_time * 17) * 0.45
+		lamp.light_energy = 3.8 if battery > 18 else 2.6 + sin(beam_time * 17) * 0.3
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := global_basis * Vector3(input.x, 0, input.y)
 	var speed := RUN_SPEED if Input.is_action_pressed("sprint") else WALK_SPEED
@@ -196,17 +193,10 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -0.1
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = 5.0
-	var impact_speed := -velocity.y
 	move_and_slide()
-	if not was_on_floor and is_on_floor() and impact_speed > 1.5:
-		landed.emit(impact_speed)
 	var moving := Vector2(velocity.x, velocity.z).length() > 0.3 and is_on_floor()
 	if moving:
 		bob_time += delta * speed * 3.4
-		step_clock += delta
-		if step_clock > 0.95 / speed:
-			step_clock = 0
-			step.emit()
 	var bob := sin(bob_time) * 0.022 if moving and not reduce_motion else 0.0
 	camera.position.y = lerpf(camera.position.y, 0.98 + bob, delta * 12)
 	hand.position = hand.position.lerp(hand_home + Vector3(bob * 0.5, bob * 0.6, 0), delta * 10)
@@ -216,7 +206,7 @@ func beam_hits(point: Vector3) -> bool:
 	if not flashlight_on:
 		return false
 	var offset := point - camera.global_position
-	if offset.length() > 18 or -camera.global_basis.z.dot(offset.normalized()) < 0.89:
+	if offset.length() > 14 or -camera.global_basis.z.dot(offset.normalized()) < 0.89:
 		return false
 	var query := PhysicsRayQueryParameters3D.create(camera.global_position, point, 1)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()

@@ -10,7 +10,7 @@ A playable first-person horror game for **Godot 4.3 or newer** (tested with 4.7.
 
 Import `project.godot` in Godot, let the GLB/audio assets import, then press **F5**. The home screen shows Ronald's diner front; choose **Play** to begin the ball pit opening. Space or Enter skips the opening. **Options** and **Exit game** are stacked on the right of the home screen.
 
-The rebuilt map uses the new Blender diner: a large play place, dining booths, kitchen, cold storage, and a back hall leading to the restrooms. Walk out through the gap in the ball pit rim. Collect three emergency fuses from a booth along the divider, a kitchen assembly table, and the cold-storage crate. Enter the kitchen through the opening to the left of the order counter, restore the breaker on its far right wall, then reach the west entrance. After the first fuse, keep the creature in the flashlight beam to stop it. It follows you around obstacles when you look away.
+The rebuilt map uses the new Blender diner: a large play place, dining booths, kitchen, cold storage, and a back hall leading to the restrooms. Environmental colors emphasize charcoal and cream, use red and gold as accents, and reserve sage green for distinctly green materials to create a grim, anxious atmosphere; pickups, controls, and the roaming clown retain their distinct colors. Runtime dust particles drift through the rooms and catch light, while reduced ambient fill leaves a few dim overhead fixtures to flicker after power is restored. Walk out through the gap in the ball pit rim. Collect three emergency fuses from a booth along the divider, a kitchen assembly table, and the cold-storage crate. Enter the kitchen through the opening to the left of the order counter, restore the breaker on its far right wall, then reach the west entrance. After the first fuse, the animated clown roams the map and chases you around obstacles when you get close. Keep it in the flashlight beam to stop it.
 
 | Control | Action |
 |---|---|
@@ -24,7 +24,7 @@ The rebuilt map uses the new Blender diner: a large play place, dining booths, k
 | F1 | Performance overlay |
 | F3 | Switch standard / low graphics |
 
-Four charge lights are mounted on the visible flashlight and change color as its battery drains. Charge drains only while the light is on; a full cell lasts about four minutes. You begin with two spares and can collect more from a dining table and the restroom side vanity. The building lights start off and come on when the breaker is restored. The Options screen, accessible from home or the pause menu, has volume, mouse sensitivity, reduced camera motion, and low graphics. The bottom control strip and spoken-text subtitles are absent. Progress resets on restart and returns to the home screen.
+Four charge lights are mounted on the visible flashlight, and a five-node HUD indicator shows the remaining battery; both change color as charge runs low. The flashlight beam has a 16 m range, and its charge drains only while it is on; a full cell lasts about two minutes. You begin with two spares and can collect more from a dining table and the restroom side vanity. The building lights start off and come on when the breaker is restored. The Options screen, accessible from home or the pause menu, has volume, mouse sensitivity, reduced camera motion, and low graphics. Progress resets on restart and returns to the home screen.
 
 ### Models and animation
 
@@ -32,8 +32,9 @@ Four charge lights are mounted on the visible flashlight and change color as its
 - `Blender models/appliances.glb`: the placed booths, dining tables, chairs, prep counters, grill, fryers, drink machines, refrigerators, and ice machine. The freezer door frame fits the cold-storage entrance.
 - `Blender models/PLay place.glb`: supplies the Blender ball mesh used throughout the playable pit. The main map already includes the play structure, so the standalone room is not overlaid on it.
 - `scripts/world.gd`: map assembly and named gameplay landmarks. The kitchen wall has a service opening; the freezer is moved out of the overlapping bathroom to the right of the kitchen. Export helper volumes and original furniture are omitted. The play-place perimeter and red enclosure use see-through glass, appliance pieces get collision and navigation clearance, the bathroom has an open entrance and stalls, and the upper play modules have supporting floors and a climbable entry. The original GLBs are preserved.
-- `scripts/player.gd`: editable `AnimationPlayer` tracks for waking, sitting/standing, drawing the flashlight from the pocket, and switching it. The visible hand, flashlight, and creature are additional Godot geometry; the supplied GLBs have no animation clips.
-- `audio/background soundtrack/`: supplied looping MP3 used as the game's background track. Other sound effects, including the impact-sensitive landing cue, can be regenerated with `python tools/generate_audio.py` (Python standard library only).
+- `Blender models/ps1-clown.glb`: the supplied rigged clown model and looping animation used by the roaming enemy.
+- `scripts/player.gd`: editable `AnimationPlayer` tracks for waking, sitting/standing, drawing the flashlight from the pocket, and switching it.
+- `audio/background soundtrack/` and `audio/nightmare_loop.wav`: the supplied looping music and quieter, looping nightmare ambience. Remaining pickup, power, and sting effects can be regenerated with `python tools/generate_audio.py` (Python standard library only).
 
 ### Furniture and appliance layout
 
@@ -55,7 +56,7 @@ Use F1 while playing to inspect performance on your machine. The visual check re
 
 ### Web export
 
-Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, and unused room audio. Keep `docs/index.pck` below 100,000,000 bytes; the current export is **9,327,884 bytes**. The packaged data includes the supplied soundtrack and landing effect.
+Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, and unused room audio. Keep `docs/index.pck` below 100,000,000 bytes; the current export is **11,522,740 bytes**. The packaged data includes the supplied soundtrack and nightmare ambience.
 
 ### Checks
 
@@ -67,7 +68,7 @@ godot --headless --path . --fixed-fps 60 --script tests/smoke.gd
 godot --path . --script tests/visual.gd
 ```
 
-The smoke test exercises the full opening, F toggle, battery drain/depletion/replacement, pause, jump and fall landings, pit exit, ball movement, the upper climb and crossing, bathroom and stall entry, physical walking routes to every fuse and battery, their interactions, the kitchen breaker, the west exit, win/loss, creature freezing, pathfinding, and restart. The visual check saves home, opening, dining, beverage, service counter, ball-pit, play-place, glass walls, bathroom entrance, kitchen, freezer, restroom, and settings captures and frame samples under `reviews/`. Menu buttons use the pickup sound as their click. These generated review files are ignored by Git. The project is a short complete prototype; no save system or exported executable is included.
+The smoke test exercises the full opening, F toggle, battery drain/depletion/replacement, pause, jumping and falling, pit exit, ball movement, the upper climb and crossing, bathroom and stall entry, physical walking routes to every fuse and battery, their interactions, the kitchen breaker, the west exit, win/loss, creature freezing, pathfinding, and restart. The visual check saves home, opening, dining, beverage, service counter, ball-pit, play-place, glass walls, bathroom entrance, kitchen, freezer, restroom, and settings captures and frame samples under `reviews/`. Menu buttons use the pickup sound as their click. These generated review files are ignored by Git. The project is a short complete prototype; no save system or exported executable is included.
 
 ## Team
 

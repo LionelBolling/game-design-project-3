@@ -28,6 +28,7 @@ var sounds: Dictionary = {}
 var breaker_lamp: MeshInstance3D
 var intro_clicked := false
 var ambient: AudioStreamPlayer
+var nightmare_ambient: AudioStreamPlayer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -58,13 +59,6 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	hud.lens_material.set_shader_parameter("darkness", 0.0)
 	_audio()
-	player.flashlight_changed.connect(func(_enabled: bool): sound("click"))
-	player.step.connect(func(): sound("step", randf_range(0.86, 1.13)))
-	player.landed.connect(func(impact_speed: float):
-		var landing := sounds["land"] as AudioStreamPlayer
-		landing.volume_db = linear_to_db(clampf(impact_speed / 9.0, 0.35, 1.0))
-		sound("land", randf_range(0.94, 1.06))
-	)
 	_show_home_view()
 	hud.show_menu("home")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -85,7 +79,7 @@ func _environment() -> void:
 	environment.background_color = Color("030609")
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	environment.ambient_light_color = Color("788795")
-	environment.ambient_light_energy = 0.3
+	environment.ambient_light_energy = 0.08
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
 	environment.fog_light_color = Color("111b20")
@@ -131,7 +125,7 @@ func _items() -> void:
 
 func _audio() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(0.8))
-	for key in ["click", "step", "land", "pickup", "breath", "sting", "power"]:
+	for key in ["pickup", "sting", "power"]:
 		var audio := AudioStreamPlayer.new()
 		audio.stream = load("res://audio/%s.wav" % key)
 		audio.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -146,6 +140,19 @@ func _audio() -> void:
 	add_child(ambient)
 	if DisplayServer.get_name() != "headless":
 		ambient.play()
+	var nightmare_stream := load("res://audio/nightmare_loop.wav") as AudioStreamWAV
+	if nightmare_stream == null:
+		push_error("The nightmare ambience could not be loaded.")
+		return
+	nightmare_stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	nightmare_ambient = AudioStreamPlayer.new()
+	nightmare_ambient.name = "NightmareAmbience"
+	nightmare_ambient.stream = nightmare_stream
+	nightmare_ambient.volume_db = -20
+	nightmare_ambient.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(nightmare_ambient)
+	if DisplayServer.get_name() != "headless":
+		nightmare_ambient.play()
 
 func sound(key: String, pitch: float = 1.0) -> void:
 	# The dummy headless audio driver cannot consume playback buffers.
@@ -183,7 +190,6 @@ func start_game() -> void:
 	hud.lens_material.set_shader_parameter("darkness", 1.0)
 	hud.show_menu("")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	sound("breath")
 	say("Cold plastic. Stale air. Where is everyone?", 4.3)
 
 func _process(delta: float) -> void:
@@ -213,8 +219,6 @@ func _process(delta: float) -> void:
 			_find_interaction()
 		var distance: float = player.global_position.distance_to(stalker.global_position)
 		hud.lens_material.set_shader_parameter("danger", clampf(1.0 - distance / 5.0, 0, 1) if stalker.active else 0.0)
-		if power_on:
-			world.flicker_light.light_energy = 1.05 + sin(elapsed * 1.8) * 0.06
 		if player.global_position.y < -5:
 			player.position = world.SPAWN
 
@@ -379,6 +383,8 @@ func _exit_tree() -> void:
 	# Release PCM playback before the audio server shuts down or restarts.
 	if is_instance_valid(ambient):
 		ambient.stop()
+	if is_instance_valid(nightmare_ambient):
+		nightmare_ambient.stop()
 	for audio in sounds.values():
 		if is_instance_valid(audio):
 			audio.stop()
