@@ -245,7 +245,7 @@ func _process(delta: float) -> void:
 			_swap_to_depth()
 		if loading_to == "maze" and loading_time >= 5.55 and not loading_swapped:
 			_swap_to_maze()
-		if loading_time >= (2.6 if loading_to == "depth" else 6.4):
+		if loading_time >= (2.6 if loading_to == "depth" else 7.7):
 			_finish_loading()
 	elif phase == "depth":
 		elapsed += delta
@@ -329,8 +329,17 @@ func _animate_transition() -> void:
 			if loading_time >= 5.0:
 				player.position.x = lerpf(loading_origin.x, loading_origin.x - 0.8, clampf((loading_time - 5.0) / 0.55, 0.0, 1.0))
 		else:
-			player.position.y = lerpf(3.8, MazeScript.SPAWN.y, clampf((loading_time - 5.55) / 0.85, 0.0, 1.0))
-			player.pitch = lerpf(0.3, 0.45, clampf((loading_time - 5.55) / 0.85, 0.0, 1.0))
+			var falling := clampf((loading_time - 5.55) / 0.85, 0.0, 1.0)
+			player.position.y = lerpf(MazeScript.UPPER_ENTRY.y + 3.65, MazeScript.UPPER_ENTRY.y, falling)
+			if loading_time < 6.4:
+				player.camera.position.y = lerpf(0.98, 0.35, clampf((loading_time - 6.05) / 0.35, 0.0, 1.0))
+				player.pitch = lerpf(0.3, 0.52, falling)
+				player.camera.rotation.z = lerpf(0.0, -0.24, clampf((loading_time - 6.05) / 0.35, 0.0, 1.0))
+			else:
+				var standing := smoothstep(0.0, 1.0, clampf((loading_time - 6.4) / 1.3, 0.0, 1.0))
+				player.camera.position.y = lerpf(0.35, 0.98, standing)
+				player.pitch = lerpf(0.52, 0.0, standing)
+				player.camera.rotation.z = lerpf(-0.24, 0.0, standing)
 			player.camera.rotation.x = player.pitch
 
 func _swap_to_depth() -> void:
@@ -355,7 +364,7 @@ func _swap_to_maze() -> void:
 	maze.set_script(MazeScript)
 	add_child(maze)
 	world = maze
-	player.position = MazeScript.SPAWN + Vector3(0, 3.65, 0)
+	player.position = MazeScript.UPPER_ENTRY + Vector3(0, 3.65, 0)
 	player.rotation.y = 0.0
 	player.pitch = 0.3
 	player.camera.rotation.x = player.pitch
@@ -377,7 +386,10 @@ func _finish_loading() -> void:
 		objective = "Swim toward the green tube"
 		say("Swim with Space and Ctrl. The green light waits below.", 5)
 	else:
-		player.position = MazeScript.SPAWN
+		player.position = MazeScript.UPPER_ENTRY
+		player.camera.position.y = 0.98
+		player.camera.rotation = Vector3.ZERO
+		player.pitch = 0.0
 		player.swimming = false
 		player.fall_speed_limit = 100.0
 		phase = "maze"
@@ -471,21 +483,25 @@ func _find_maze_interaction() -> void:
 				maze_color = color
 				prompt = "E  /  Pull %s lever" % color
 			var door_node := world.doors[color] as Node3D
-			var door_distance := player.global_position.distance_to(door_node.global_position)
+			var sockets := world.keyhole_nodes[color] as Node3D
+			var door_distance := minf(player.global_position.distance_to(sockets.to_global(Vector3(0.72, 0, -0.58))), player.global_position.distance_to(sockets.to_global(Vector3(0.72, 0, 0.58))))
 			if door_node.visible and door_distance < best:
 				best = door_distance
 				maze_kind = "door"
 				maze_color = color
-				prompt = "E  /  Unlock %s door" % color
+				prompt = "E  /  Use %s key in wall lock" % color if world.keys[color] else "E  /  Inspect %s wall lock" % color
+	var black_lever := world.lever_nodes.black as Node3D
+	var black_lever_distance := player.global_position.distance_to(black_lever.global_position)
+	if black_lever_distance < best:
+		best = black_lever_distance
+		maze_kind = "lever"
+		maze_color = "black"
+		prompt = "E  /  Pull black lever" if world.cabinet_unlocked else "E  /  Inspect sealed black lever"
 	var cabinet := world.find_child("Cabinet_Black_Lock", true, false) as Node3D
 	if cabinet and player.global_position.distance_to(cabinet.global_position) < best:
 		best = player.global_position.distance_to(cabinet.global_position)
 		maze_kind = "cabinet"
 		prompt = "E  /  Unlock circle lock"
-	if player.global_position.distance_to(MazeScript.CLIMB) < best:
-		best = player.global_position.distance_to(MazeScript.CLIMB)
-		maze_kind = "climb"
-		prompt = "E  /  Climb into the tube maze"
 	var exit_node := world.find_child("Final_Exit_Door", true, false) as Node3D
 	if exit_node and player.global_position.distance_to(exit_node.global_position) < best:
 		maze_kind = "final"
@@ -495,11 +511,7 @@ func _interact_maze() -> void:
 	_find_maze_interaction()
 	if maze_kind.is_empty():
 		return
-	if maze_kind == "climb":
-		player.position = MazeScript.UPPER_ENTRY
-		player.velocity = Vector3.ZERO
-		say("The tube network opens above the play floor.", 3)
-	elif maze_kind == "final" and world.final_open:
+	if maze_kind == "final" and world.final_open:
 		finish(true)
 	else:
 		var result: String = world.interact(maze_kind, maze_color)

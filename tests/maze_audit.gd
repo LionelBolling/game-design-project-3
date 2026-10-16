@@ -39,10 +39,10 @@ func run() -> void:
 	for color in ["red", "blue", "yellow", "green", "black"]:
 		var key := maze.key_nodes[color] as Node3D
 		ok = ok and components.get(_cell(key.global_position), 0) == 1
+		var lever := maze.lever_nodes[color] as Node3D
+		ok = ok and components.get(_cell(lever.global_position), 0) == 1
 		if color != "black":
-			var lever := maze.lever_nodes[color] as Node3D
 			var door := maze.doors[color] as Node3D
-			ok = ok and components.get(_cell(lever.global_position), 0) == 1
 			ok = ok and components.get(_cell(door.global_position), 0) == 1
 	print(("PASS " if ok else "FAIL ") + "Entire tube floor, keys, doors, levers, and circle form one connected layout")
 	quit(0 if ok else 1)

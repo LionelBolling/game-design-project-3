@@ -28,6 +28,7 @@ func run() -> void:
 	game.player.position = Vector3(-6, -49, -17)
 	game.player.camera.look_at(Vector3(-14.1, -52.6, -17))
 	game.player.pitch = game.player.camera.rotation.x
+	await create_timer(0.2).timeout
 	await capture("act-depth")
 	game.depth_loops = 3
 	await create_timer(0.1).timeout
@@ -41,15 +42,26 @@ func run() -> void:
 	await create_timer(0.85).timeout
 	await capture("act-maze-ball")
 	await create_timer(1.05).timeout
-	game.player.position = Vector3(0, 0.15, 28)
-	game.player.camera.look_at(Vector3(0, 5, 25))
-	game.player.pitch = game.player.camera.rotation.x
+	await capture("act-maze-getup")
+	await create_timer(1.35).timeout
 	await capture("act-maze-entry")
 	game.player.position = game.world.UPPER_ENTRY
 	game.player.rotation.y = 0.0
 	game.player.pitch = 0.0
 	game.player.camera.rotation = Vector3.ZERO
 	await capture("act-maze-tube")
+	var red_key := game.world.key_nodes.red as Node3D
+	game.player.position = red_key.global_position + Vector3(0, -0.98, 1.5)
+	game.player.camera.look_at(red_key.global_position)
+	await capture("act-maze-key-model")
+	var red_lever := game.world.lever_nodes.red as Node3D
+	game.player.position = red_lever.global_position + red_lever.global_basis.z * 1.25 + Vector3(0, -0.6, 0)
+	game.player.camera.look_at(red_lever.global_position + Vector3(0, 0.4, 0))
+	await capture("act-maze-lever-model")
+	var red_door := game.world.doors.red as Node3D
+	game.player.position = red_door.global_position + Vector3(0, -0.98, 2.3)
+	game.player.camera.look_at(red_door.global_position)
+	await capture("act-maze-wall-keyhole")
 	var overhead := Camera3D.new()
 	overhead.projection = Camera3D.PROJECTION_ORTHOGONAL
 	overhead.size = 105.0

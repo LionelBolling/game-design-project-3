@@ -9,6 +9,9 @@ const BACK := -20.5
 const FRONT := -6.0
 const DEPTH := 56.0
 const TUBE := Vector3(-14.1, -52.6, -17.0)
+const MOVING_LAYERS := 18
+const BALLS_PER_LAYER := 640
+const LAYER_SPAN := 5.76
 
 var tube_light: OmniLight3D
 var tube_material: StandardMaterial3D
@@ -71,7 +74,7 @@ func _scattered_balls() -> void:
 	balls.transform_format = MultiMesh.TRANSFORM_3D
 	balls.use_colors = true
 	balls.mesh = mesh
-	balls.instance_count = 2200
+	balls.instance_count = 3600
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 91450
 	var colors := [Color("b64c3e"), Color("c7aa3f"), Color("3364a0")]
@@ -103,12 +106,13 @@ func _moving_balls() -> void:
 	balls.transform_format = MultiMesh.TRANSFORM_3D
 	balls.use_colors = true
 	balls.mesh = mesh
-	balls.instance_count = 5 * 40 * 16
+	balls.instance_count = MOVING_LAYERS * BALLS_PER_LAYER
+	balls.custom_aabb = AABB(Vector3(LEFT, -DEPTH, BACK), Vector3(RIGHT - LEFT, DEPTH, FRONT - BACK))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 65412
 	var colors := [Color("b64c3e"), Color("c7aa3f"), Color("3364a0")]
-	for layer in 5:
-		var height := -2.0 + layer * 0.45
+	for layer in MOVING_LAYERS:
+		var height := -5.4 + layer * 0.32
 		layer_heights.append(height)
 		for row in 16:
 			for column in 40:
@@ -133,17 +137,17 @@ func _animate_balls(delta: float) -> void:
 	if player == null:
 		return
 	var p := player.global_position
-	for layer in 5:
+	for layer in MOVING_LAYERS:
 		var shift := 0.0
-		while layer_heights[layer] > p.y + 0.7:
-			layer_heights[layer] -= 2.25
-			shift -= 2.25
-		while layer_heights[layer] < p.y - 2.5:
-			layer_heights[layer] += 2.25
-			shift += 2.25
+		while layer_heights[layer] > p.y + 1.0:
+			layer_heights[layer] -= LAYER_SPAN
+			shift -= LAYER_SPAN
+		while layer_heights[layer] < p.y - 4.76:
+			layer_heights[layer] += LAYER_SPAN
+			shift += LAYER_SPAN
 		if shift != 0.0:
-			for cell in 640:
-				var index := layer * 640 + cell
+			for cell in BALLS_PER_LAYER:
+				var index := layer * BALLS_PER_LAYER + cell
 				ball_origins[index].y += shift
 				ball_positions[index] = ball_origins[index]
 				ball_instances.set_instance_transform(index, Transform3D(Basis.IDENTITY, ball_origins[index]))
@@ -151,12 +155,12 @@ func _animate_balls(delta: float) -> void:
 	if moving:
 		var column := clampi(roundi((p.x - LEFT - 0.4) / 0.775), 0, 39)
 		var row := clampi(roundi((p.z - BACK - 0.45) / 0.91), 0, 15)
-		for layer in 5:
+		for layer in MOVING_LAYERS:
 			if absf(layer_heights[layer] - p.y) > 1.4:
 				continue
 			for z in range(maxi(0, row - 2), mini(15, row + 2) + 1):
 				for x in range(maxi(0, column - 2), mini(39, column + 2) + 1):
-					active_balls[layer * 640 + z * 40 + x] = true
+					active_balls[layer * BALLS_PER_LAYER + z * 40 + x] = true
 	var settled: Array[int] = []
 	for index in active_balls:
 		var i: int = index

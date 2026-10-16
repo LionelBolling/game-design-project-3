@@ -69,14 +69,18 @@ func run() -> void:
 	await create_timer(3.6).timeout
 	check(game.phase == "loading" and game.transition_fx.leviathan.visible, "Leviathan rises after shark retreats")
 	await create_timer(2.0).timeout
+	check(game.phase == "loading" and game.player.camera.position.y < 0.9, "Player lands and begins getting up in first person")
+	await create_timer(1.4).timeout
 	check(game.phase == "maze" and game.player.control_enabled, "Tube maze loads and movement resumes")
+	check(game.player.position.y > 4.0 and game.player.camera.position.y > 0.9, "Player stands directly inside the maze tubes")
 	check(game.world.source_count > 600 and game.world.batch_count < 300, "Supplied tube maze is imported and batched")
 	var ray := PhysicsRayQueryParameters3D.create(Vector3(30.8, 7.0, -24.0), Vector3(30.8, 3.0, -24.0), 1)
 	var hit := game.get_world_3d().direct_space_state.intersect_ray(ray)
 	check(not hit.is_empty() and hit.position.y > 4.0, "Tube interior has supporting collision")
-	game.player.position = game.world.CLIMB
-	game._interact_maze()
-	check(game.player.position.y > 4.0, "Entrance climb reaches elevated tubes")
+	for color in ["red", "blue", "yellow", "green"]:
+		check(game.world.key_nodes[color].find_child("Key_%s_Shaft" % color.capitalize(), true, false) != null, "%s key uses supplied model" % color)
+		check(game.world.lever_nodes[color].find_child("Lever_%s_Backplate" % color.capitalize(), true, false) != null, "%s lever uses supplied model" % color)
+		check(game.world.keyhole_nodes.has(color), "%s doorway has wall keyholes" % color)
 	game.player.rotation.y = 0.0
 	var upper_start: Vector3 = game.player.position
 	Input.action_press("move_forward")
@@ -99,7 +103,10 @@ func run() -> void:
 	check(game.world.keys.black, "Black key can be collected")
 	game.player.position = game.world.find_child("Cabinet_Black_Lock", true, false).global_position
 	game._interact_maze()
-	check(game.world.levers.black and game.world.final_open, "Circle lock activates fifth circuit and opens final door")
+	check(game.world.cabinet_unlocked and not game.world.levers.black and not game.world.final_open, "Black key opens circle lock before fifth circuit activates")
+	game.player.position = game.world.lever_nodes.black.global_position
+	game._interact_maze()
+	check(game.world.levers.black and game.world.final_open, "Black lever activates fifth circuit and opens final door")
 	game.player.position = game.world.find_child("Final_Exit_Door", true, false).global_position
 	game._interact_maze()
 	check(game.phase == "won", "Opened final door completes Act 2")

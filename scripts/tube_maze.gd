@@ -1,11 +1,11 @@
 extends Node3D
 const Geo = preload("res://scripts/geometry.gd")
 const MODEL = preload("res://Blender models/tube maze.glb")
+const PUZZLE_MODELS = preload("res://Blender models/keys and levers.glb")
 const PATHS = preload("res://scripts/maze_paths.json")
 const COLORS := {"red": Color("e94f48"), "blue": Color("4c91ed"), "yellow": Color("ead24d"), "green": Color("5de087"), "black": Color("c5c0e1")}
-const SPAWN := Vector3(0, 0.15, 28.0)
-const CLIMB := Vector3(0.3, 0.15, 27.4)
 const UPPER_ENTRY := Vector3(0.25, 4.42, 25.9)
+const SPAWN := UPPER_ENTRY
 
 var keys := {}
 var levers := {}
@@ -14,10 +14,13 @@ var door_bodies := {}
 var indicators := {}
 var key_nodes := {}
 var lever_nodes := {}
+var lever_arms := {}
+var keyhole_nodes := {}
 var source_count := 0
 var batch_count := 0
 var _groups := {}
 var final_open := false
+var cabinet_unlocked := false
 var corridor_cells := {}
 const GRID := 0.4
 const GRID_MIN := Vector2(-42.0, -31.2)
@@ -45,7 +48,10 @@ func _ready() -> void:
 			var color := title.get_slice("_", 0).to_lower()
 			doors[color] = mesh
 			var bounds := mesh.global_transform * mesh.get_aabb()
-			door_bodies[color] = _box_collision(bounds.get_center(), bounds.size)
+			var gate_size: Vector3 = Vector3(3.2, 2.5, 0.64) if color in ["red", "yellow"] else Vector3(0.64, 2.5, 3.2)
+			var gate: StaticBody3D = _box_collision(bounds.get_center(), gate_size)
+			gate.name = "LockedGate_%s" % color
+			door_bodies[color] = gate
 		elif title.begins_with("Indicator_"):
 			indicators[title.get_slice("_", 1).to_int()] = mesh
 		if title in ["Cabinet_Door", "Final_Exit_Door"]:
@@ -68,6 +74,8 @@ func _ready() -> void:
 	_groups.clear()
 	_build_connected_tubes()
 	_raise_puzzle_items()
+	_install_puzzle_models()
+	_build_keyholes()
 	var ground := Geo.material(Color("242c38"))
 	Geo.box(self, Vector3(0, -0.12, 27), Vector3(8, 0.24, 8), ground)
 	_box_collision(Vector3(0, -0.12, 27), Vector3(8, 0.24, 8))
@@ -104,6 +112,114 @@ func _raise_puzzle_items() -> void:
 			var item := find_child("%s_%s" % [color.capitalize(), suffix], true, false) as Node3D
 			if item:
 				item.position.y += 4.3
+
+func _install_puzzle_models() -> void:
+	var parts := PUZZLE_MODELS.instantiate()
+	for color in COLORS:
+		var old_key := key_nodes[color] as Node3D
+		var key_root := _copy_puzzle_model(parts.find_child("KEY_%s_ROOT" % color.to_upper(), true, false) as Node3D, old_key.global_position, false)
+		key_root.name = "%s_Model_Key" % color.capitalize()
+		key_nodes[color] = key_root
+		old_key.hide()
+		var old_ring := find_child("%s_Key_Ring" % color.capitalize(), true, false) as Node3D
+		if old_ring:
+			old_ring.hide()
+		if color == "black":
+			var black_root := _copy_puzzle_model(parts.find_child("LEVER_BLACK_ROOT", true, false) as Node3D, Vector3(-4.6, 5.15, 0), true)
+			black_root.name = "Black_Model_Lever"
+			_mount_on_tube_wall(black_root, Vector2(-4.6, 0))
+			lever_nodes.black = black_root
+			lever_arms.black = black_root.get_node("HandlePivot")
+			continue
+		var old_lever := lever_nodes[color] as Node3D
+		var lever_root := _copy_puzzle_model(parts.find_child("LEVER_%s_ROOT" % color.to_upper(), true, false) as Node3D, old_lever.global_position - Vector3(0, 0.7, 0), true)
+		lever_root.name = "%s_Model_Lever" % color.capitalize()
+		_mount_on_tube_wall(lever_root, Vector2(old_lever.global_position.x, old_lever.global_position.z))
+		lever_nodes[color] = lever_root
+		lever_arms[color] = lever_root.get_node("HandlePivot")
+		old_lever.hide()
+		for suffix in ["Lever_Base", "Lever_Stem"]:
+			var old_part := find_child("%s_%s" % [color.capitalize(), suffix], true, false) as Node3D
+			if old_part:
+				old_part.hide()
+	parts.free()
+
+func _copy_puzzle_model(source_root: Node3D, at: Vector3, is_lever: bool) -> Node3D:
+	var root_node := Node3D.new()
+	root_node.position = at
+	add_child(root_node)
+	var arm: Node3D
+	if is_lever:
+		arm = Node3D.new()
+		arm.name = "HandlePivot"
+		arm.position = Vector3(0, 0.36, 0.155)
+		root_node.add_child(arm)
+	for child in source_root.get_children():
+		if not child is MeshInstance3D:
+			continue
+		var original := child as MeshInstance3D
+		var piece := original.duplicate() as MeshInstance3D
+		var movable := is_lever and (piece.name.ends_with("_Arm") or piece.name.ends_with("_Handle"))
+		(arm if movable else root_node).add_child(piece)
+		piece.transform = original.transform
+		piece.position -= source_root.position
+		if movable:
+			piece.position -= arm.position
+	return root_node
+
+func _mount_on_tube_wall(model: Node3D, near: Vector2) -> void:
+	var best_distance := INF
+	var outward := Vector2.ZERO
+	var mount := near
+	for cell in corridor_cells:
+		var point := _grid_point(cell)
+		if point.distance_squared_to(near) > 6.25:
+			continue
+		for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			if corridor_cells.has(cell + direction):
+				continue
+			var normal := Vector2(direction)
+			var edge := point + normal * (GRID * 0.5)
+			var distance := edge.distance_squared_to(near)
+			if distance < best_distance:
+				best_distance = distance
+				outward = normal
+				mount = edge - normal * 0.035
+	model.position.x = mount.x
+	model.position.z = mount.y
+	model.rotation.y = atan2(-outward.x, -outward.y)
+
+func _build_keyholes() -> void:
+	for color in ["red", "blue", "yellow", "green"]:
+		var door := doors[color] as Node3D
+		var sockets := Node3D.new()
+		sockets.name = "%s_Wall_Keyholes" % color.capitalize()
+		sockets.position = door.global_position
+		sockets.rotation.y = 0.0 if color in ["red", "yellow"] else PI * 0.5
+		add_child(sockets)
+		for face in [-1.0, 1.0]:
+			_keyhole(sockets, Vector3(0.72, 0, face * 0.58), color, face)
+		keyhole_nodes[color] = sockets
+	var cabinet := find_child("Cabinet_Black_Lock", true, false) as Node3D
+	if cabinet:
+		var black_socket := Node3D.new()
+		black_socket.name = "Black_Circle_Keyhole"
+		black_socket.position = cabinet.global_position + Vector3(0, 0, -0.19)
+		add_child(black_socket)
+		_keyhole(black_socket, Vector3.ZERO, "black", -1.0)
+		keyhole_nodes.black = black_socket
+
+func _keyhole(parent: Node3D, at: Vector3, color: String, face: float) -> void:
+	var plate := Geo.material(COLORS[color].darkened(0.45), 0.65)
+	var trim := Geo.material(COLORS[color], 0.3, 0.4)
+	var dark := Geo.material(Color("07090e"), 0.1)
+	Geo.box(parent, at, Vector3(0.28, 0.43, 0.075), plate)
+	var front := at + Vector3(0, 0, face * 0.045)
+	var bezel := Geo.cylinder(parent, front + Vector3(0, 0.05, 0), 0.105, 0.016, trim)
+	bezel.rotation.x = PI * 0.5
+	var hole := Geo.cylinder(parent, front + Vector3(0, 0.05, face * 0.014), 0.058, 0.019, dark)
+	hole.rotation.x = PI * 0.5
+	Geo.box(parent, front + Vector3(0, -0.025, face * 0.019), Vector3(0.048, 0.13, 0.019), dark)
 
 func _grid_point(cell: Vector2i) -> Vector2:
 	return GRID_MIN + Vector2(cell) * GRID
@@ -250,24 +366,25 @@ func interact(kind: String, color: String) -> String:
 	if kind == "lever":
 		if levers[color]:
 			return "This circuit is already live."
+		if color == "black" and not cabinet_unlocked:
+			return "The circle lock must be opened first."
 		levers[color] = true
-		(lever_nodes[color] as Node3D).rotation.z = -0.7
-		(indicators[color] as OmniLight3D).light_energy = 2.0
+		(lever_arms[color] as Node3D).rotation.x = -0.7
+		if color != "black":
+			(indicators[color] as OmniLight3D).light_energy = 2.0
 		_light_central_indicator(color)
 		_open_final_if_ready()
 		return "%s light is on." % color.capitalize()
 	if kind == "cabinet":
 		if not keys.black:
 			return "The circle lock needs the black key."
-		if not levers.black:
-			levers.black = true
+		if not cabinet_unlocked:
+			cabinet_unlocked = true
 			(door_bodies["Cabinet_Door"] as Node).queue_free()
 			var cabinet_door := find_child("Cabinet_Door", true, false) as Node3D
 			if cabinet_door:
 				cabinet_door.hide()
-			_light_central_indicator("black")
-			_open_final_if_ready()
-		return "Black circuit is on."
+		return "Circle lock opened. Pull the black lever."
 	if kind == "final":
 		return "The five circuits must be live." if not final_open else "The tube maze is behind you."
 	return ""

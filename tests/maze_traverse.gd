@@ -99,6 +99,12 @@ func run() -> void:
 		var ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.5, door.global_position + normal * 1.5, 1)
 		var hit := maze.get_world_3d().direct_space_state.intersect_ray(ray)
 		check(not hit.is_empty() and hit.collider == maze.door_bodies[color], "%s door blocks its passage" % color)
+		var across := Vector3.RIGHT if color in ["red", "yellow"] else Vector3.FORWARD
+		for side in [-0.65, 0.65]:
+			var sidestep: Vector3 = across * float(side)
+			var edge_ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.5 + sidestep, door.global_position + normal * 1.5 + sidestep, 1)
+			var edge_hit := maze.get_world_3d().direct_space_state.intersect_ray(edge_ray)
+			check(not edge_hit.is_empty() and edge_hit.collider == maze.door_bodies[color], "%s gate cannot be passed at side %.2f" % [color, side])
 	var caps := maze.find_children("Collision_Cap_*", "StaticBody3D", false, false)
 	check(caps.size() == 22, "Only the 22 marked endpoints have cap collisions")
 	for body in maze.door_bodies.values():
@@ -110,8 +116,7 @@ func run() -> void:
 	var destinations: Array[Node3D] = []
 	for color in ["red", "blue", "yellow", "green", "black"]:
 		destinations.append(maze.key_nodes[color])
-		if color != "black":
-			destinations.append(maze.lever_nodes[color])
+		destinations.append(maze.lever_nodes[color])
 	destinations.append(maze.find_child("Cabinet_Black_Lock", true, false))
 	destinations.append(maze.find_child("Final_Exit_Door", true, false))
 	for target in destinations:
