@@ -36,9 +36,21 @@ func test_waits_so_the_whisper_comes_at_least_five_seconds_before_he_arrives() -
 	assert_eq(rules.speed, rules.tuning.search_speed)
 
 
+func test_already_beside_the_spot_he_still_waits_out_the_warning() -> void:
+	board.enemy_position = Vector3(1.5, 0, 0) # at the table's open side
+	_hide_and_leak(&"table_3")
+	rules.step(board, 0.1) # the whisper
+	board.target_unreachable = true # as close as he gets: under the table is out of reach
+	rules.step(board, 4.5)
+	assert_eq(rules.mode, BoardTypes.Mode.SEEK, "not before 5 s")
+	rules.step(board, 0.5)
+	assert_eq(rules.mode, BoardTypes.Mode.CATCH)
+
+
 func test_still_in_the_spot_when_he_arrives_means_caught() -> void:
 	_hide_and_leak(&"booth_2")
 	rules.step(board, 0.1)
+	rules.step(board, 5.0) # the warning, then the walk
 	board.at_target = true
 	rules.step(board, 0.1)
 	assert_eq(rules.mode, BoardTypes.Mode.CATCH)
@@ -47,6 +59,7 @@ func test_still_in_the_spot_when_he_arrives_means_caught() -> void:
 func test_an_empty_spot_when_he_arrives_means_he_searches_it() -> void:
 	_hide_and_leak(&"booth_2")
 	rules.step(board, 0.1)
+	rules.step(board, 5.0) # the warning, then the walk
 	board.hide_state = BoardTypes.Hide.EXPOSED
 	board.hide_spot = &""
 	board.location_leaked = false

@@ -28,7 +28,7 @@ func test_seeking_a_spot_he_cant_reach_counts_as_arriving() -> void:
 	board.location_leaked = true
 	rules.step(board, 0.1)
 	board.target_unreachable = true
-	rules.step(board, 0.1)
+	rules.step(board, rules.tuning.seek_min_warning) # once the warning has run
 	assert_eq(rules.mode, BoardTypes.Mode.CATCH, "still there, as close as he can get")
 
 

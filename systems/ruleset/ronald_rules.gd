@@ -21,6 +21,7 @@ var _sprinting := false
 var _seek_fired := false
 var _seek_spot: StringName = &""
 var _seek_wait := 0.0
+var _seek_elapsed := 0.0
 var _camp_time := 0.0
 var _patrol_time := 0.0
 var _pose_length := 0.0
@@ -163,13 +164,17 @@ func _seek(board: Blackboard) -> void:
 		return
 	mode = BoardTypes.Mode.SEEK
 	target = board.player_position
+	_seek_elapsed = 0.0
 	var travel_time := board.enemy_position.distance_to(target) / tuning.search_speed
 	_seek_wait = maxf(0.0, tuning.seek_min_warning - travel_time)
 	speed = 0.0 if _seek_wait > 0.0 else tuning.search_speed
 
 
 func _seeking(board: Blackboard, delta: float) -> void:
-	if _arrived(board):
+	_seek_elapsed += delta
+	# Already beside the spot (or as close as he gets) still counts only once
+	# the warning has run: the whisper always comes seek_min_warning first.
+	if _arrived(board) and _seek_elapsed >= tuning.seek_min_warning:
 		var still_there := board.hide_state == BoardTypes.Hide.HIDDEN and board.hide_spot == _seek_spot
 		if still_there:
 			_catch(board)
