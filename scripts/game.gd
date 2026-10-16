@@ -14,6 +14,7 @@ var intro_time := 0.0
 var elapsed := 0.0
 var fuses := 0
 var spare_cells := 2
+var max_spare_cells: int = 2
 var power_on := false
 var objective := "Find the three emergency fuses"
 var prompt := ""
@@ -29,6 +30,14 @@ var breaker_lamp: MeshInstance3D
 var intro_clicked := false
 var ambient: AudioStreamPlayer
 var nightmare_ambient: AudioStreamPlayer
+var hiding: HidingSystem
+var hiding_director: Director
+var _hiding_audio_bus: int = -1
+var horror_feedback: HorrorFeedback
+var horror_events: HorrorEvents
+var timeout_scene: TimeoutCutscene
+var catch_scene: CatchCutscene
+var grapple_scene: GrappleCutscene
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -50,7 +59,9 @@ func _ready() -> void:
 	stalker.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(stalker)
 	stalker.caught.connect(func(): finish(false))
+	stalker.light_attack.connect(_begin_grapple)
 	_items()
+	max_spare_cells = spare_cells + world.CELL_POSITIONS.size()
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
 	hud = Control.new()
@@ -59,10 +70,96 @@ func _ready() -> void:
 	canvas.add_child(hud)
 	hud.lens_material.set_shader_parameter("darkness", 0.0)
 	_audio()
+	_setup_hiding()
+	horror_feedback = HorrorFeedback.new()
+	add_child(horror_feedback)
+	horror_events = HorrorEvents.new()
+	add_child(horror_events)
+	timeout_scene = TimeoutCutscene.new()
+	add_child(timeout_scene)
+	timeout_scene.configure(player, stalker)
+	catch_scene = CatchCutscene.new()
+	add_child(catch_scene)
+	grapple_scene = GrappleCutscene.new()
+	add_child(grapple_scene)
+	horror_feedback.voice_managed_by_cutscene = true
+	player.camera.make_current()
 	_show_home_view()
 	hud.show_menu("home")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	print("RONALD'S: %d source meshes -> %d static batches; %d Blender balls -> 1 MultiMesh." % [world.source_mesh_count, world.batch_count, world.ball_count])
+
+func _setup_hiding() -> void:
+	hiding_director = Director.new()
+	hiding_director.name = "HidingDirector"
+	hiding_director.process_mode = Node.PROCESS_MODE_PAUSABLE
+	hiding = HidingSystem.new()
+	hiding.external_body = true
+	hiding.keyboard = false
+	hiding.body = player
+	hiding.camera = player.get("camera") as Camera3D
+	hiding_director.add_child(hiding)
+	# Legacy AI remains in charge; these slots do not simulate duplicate enemies.
+	for id: StringName in [&"senses", &"ruleset", &"roaming"]:
+		var slot: SimSystem = SimSystem.new()
+		slot.system_id = id
+		hiding_director.add_child(slot)
+	add_child(hiding_director)
+	hiding_director.set_physics_process(false)
+	hiding.hud.message.position = Vector2(40, 570)
+	hiding.hud.bar.position = Vector2(40, 606)
+	hiding.hud.hide()
+	if AudioServer.get_bus_index(&"MainHidingAmbience") == -1:
+		AudioServer.add_bus()
+		AudioServer.set_bus_name(AudioServer.bus_count - 1, &"MainHidingAmbience")
+		AudioServer.add_bus_effect(AudioServer.bus_count - 1, AudioEffectLowPassFilter.new())
+	_hiding_audio_bus = AudioServer.get_bus_index(&"MainHidingAmbience")
+	AudioServer.set_bus_effect_enabled(_hiding_audio_bus, 0, false)
+	ambient.bus = &"MainHidingAmbience"
+	if nightmare_ambient != null:
+		nightmare_ambient.bus = &"MainHidingAmbience"
+	for fitting: Dictionary in world.get("appliance_layout"):
+		if fitting.asset == "Asset_Table":
+			_add_hiding_spot(fitting.position + Vector3(0, 0.12, 0), HideSpot.Kind.TABLE, Vector3(4.0, 1.8, 4.0), 0.38)
+		elif fitting.asset == "Asset_Booth":
+			_add_hiding_spot(fitting.position + Vector3(0, 0.12, 0), HideSpot.Kind.TABLE, Vector3(4.8, 1.8, 4.0), 0.38, false, "booth table", Vector3(0.25, 0, -0.57), 0.0)
+		elif fitting.asset == "Asset_AssemblyTable":
+			# These are solid cabinets; hide behind their rear edge, not inside.
+			_add_hiding_spot(fitting.position + Vector3(0, 0.12, 1.35), HideSpot.Kind.TABLE, Vector3(5.0, 1.8, 2.0), 0.38, false, "prep counter", Vector3.ZERO)
+
+func _add_hiding_spot(at: Vector3, kind: HideSpot.Kind, size: Vector3, eye: float, keep: bool = false, label: String = "dining table", offset: Vector3 = Vector3(0, 0, 0.57), yaw: float = PI) -> void:
+	var spot: HideSpot = HideSpot.new()
+	spot.position = at
+	spot.spot_id = StringName("main_%s_%s" % [kind, at])
+	spot.spot_type = kind
+	spot.eye_height = eye
+	spot.keep_position = keep
+	spot.display_name = label
+	spot.show_marker = true
+	spot.outward_yaw = yaw
+	if kind == HideSpot.Kind.TABLE:
+		# The imported table has a central pedestal. Keep the eyes and beam
+		# outside it, beneath the 0.715 m tabletop, facing into the room.
+		spot.hide_offset = offset
+		spot.face_outward = true
+	spot.collision_layer = 0
+	spot.collision_mask = 2 # The existing main player uses layer 2.
+	var collider: CollisionShape3D = CollisionShape3D.new()
+	var shape: BoxShape3D = BoxShape3D.new()
+	shape.size = size
+	collider.shape = shape
+	collider.position.y = size.y * 0.5
+	spot.add_child(collider)
+	add_child(spot)
+
+func _physics_process(delta: float) -> void:
+	for node: Node in get_tree().get_nodes_in_group(HideSpot.GROUP):
+		(node as HideSpot).markers_enabled = phase == "play" and not get_tree().paused and not timeout_scene.camera_locked and not player.hiding_locked
+	if phase == "play" and not get_tree().paused:
+		hiding_director.step(delta)
+		timeout_scene.tick(hiding_director.board.location_leaked, delta)
+		var spot: HideSpot = hiding._spot
+		AudioServer.set_bus_effect_enabled(_hiding_audio_bus, 0, spot != null and spot.spot_type == HideSpot.Kind.BALL_PIT)
 
 func _bind_inputs() -> void:
 	var bindings := {"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D, "sprint": KEY_SHIFT, "jump": KEY_SPACE, "flashlight": KEY_F, "interact": KEY_E, "reload_cell": KEY_R}
@@ -193,6 +290,8 @@ func start_game() -> void:
 	say("Cold plastic. Stale air. Where is everyone?", 4.3)
 
 func _process(delta: float) -> void:
+	if hiding != null:
+		hiding.hud.visible = phase == "play" and not get_tree().paused
 	if get_tree().paused:
 		return
 	message_time = maxf(0, message_time - delta)
@@ -231,6 +330,9 @@ func finish_intro() -> void:
 func _find_interaction() -> void:
 	current_item = -1
 	prompt = ""
+	if hiding != null and hiding.timer.spot_id != &"":
+		prompt = "E  /  Leave hiding spot"
+		return
 	var best := 3.5
 	for i in items.size():
 		var item := items[i]
@@ -246,9 +348,14 @@ func _find_interaction() -> void:
 		best = distance
 		current_item = i
 		prompt = item.label
+	if current_item < 0 and hiding != null and hiding._nearby_spot() != null:
+		prompt = "E  /  Hide at " + hiding._nearby_spot().display_name
 
 func interact() -> void:
 	_find_interaction()
+	if hiding != null and (hiding.timer.spot_id != &"" or (current_item < 0 and hiding._nearby_spot() != null)):
+		hiding.interact_requested = true
+		return
 	if current_item < 0:
 		return
 	var item := items[current_item]
@@ -310,23 +417,87 @@ func replace_cell() -> void:
 func finish(escaped: bool) -> void:
 	if phase != "play":
 		return
-	phase = "won" if escaped else "dead"
+	timeout_scene.cancel()
+	phase = "won" if escaped else "caught"
 	player.control_enabled = false
 	stalker.active = false
+	stalker.chasing = false
+	stalker.update_locomotion(0.0, 0.0)
+	horror_feedback.stop()
 	message_time = 0
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if escaped:
+		horror_events.clear()
 		var tween := create_tween()
 		tween.tween_property(world.exit_door, "rotation:y", -1.2, 1.5)
 		sound("power")
 	else:
-		sound("sting", 0.7)
+		hud.lens_material.set_shader_parameter("danger", 0.0)
+		hud.lens_material.set_shader_parameter("darkness", 0.0)
+		horror_events.start_catch()
+		catch_scene.start(player.camera, stalker, _finish_caught)
+	hud.queue_redraw()
+
+func _finish_caught() -> void:
+	if phase != "caught":
+		return
+	phase = "dead"
+	horror_events.clear()
+	hud.queue_redraw()
+
+func _begin_grapple() -> void:
+	if phase != "play" or timeout_scene.camera_locked or player.hiding_locked:
+		return
+	phase = "grapple"
+	player.control_enabled = false
+	player.velocity = Vector3.ZERO
+	stalker.active = false
+	stalker.chasing = false
+	stalker.update_locomotion(0.0, 0.0)
+	horror_feedback.stop()
+	horror_events.play_attack_scream()
+	hud.lens_material.set_shader_parameter("danger", 0.0)
+	grapple_scene.start(player.camera, stalker, _grapple_won, _grapple_lost)
+	hud.queue_redraw()
+
+func _grapple_won() -> void:
+	if phase != "grapple":
+		return
+	phase = "play"
+	player.control_enabled = true
+	player.toggle_cooldown = 0.0
+	player.set_flashlight(true)
+	stalker.active = true
+	stalker.show()
+	stalker.grace = 3.0
+	stalker.path.clear()
+	stalker.path_timer = 0.0
+	stalker.patrol_target_valid = false
+	stalker.reset_light_attack()
+	horror_events.clear()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	say("He's off you. Run!", 2.5)
+	hud.queue_redraw()
+
+func _grapple_lost() -> void:
+	if phase != "grapple":
+		return
+	phase = "dead"
+	player.control_enabled = false
+	stalker.active = false
+	stalker.reset_light_attack()
+	horror_events.clear()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	hud.queue_redraw()
 
 func pause_game(paused: bool) -> void:
 	if phase == "home":
 		return
 	get_tree().paused = paused
+	grapple_scene.set_paused(paused)
+	if paused:
+		timeout_scene.cancel()
+		horror_events.clear()
 	hud.show_menu("pause" if paused else "")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if paused else Input.MOUSE_MODE_CAPTURED
 
@@ -342,6 +513,9 @@ func set_quality(low: bool) -> void:
 		hud.quality_button.set_pressed_no_signal(low)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if phase == "grapple" and not get_tree().paused and grapple_scene.handle_input(event):
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_F11:
@@ -370,13 +544,15 @@ func _unhandled_input(event: InputEvent) -> void:
 				if phase == "intro" and not get_tree().paused:
 					finish_intro()
 	if phase == "play" and not get_tree().paused:
+		if timeout_scene.camera_locked:
+			return
 		if event.is_action_pressed("interact"):
 			interact()
 		if event.is_action_pressed("reload_cell"):
 			replace_cell()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(hud) and phase in ["intro", "play"]:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(hud) and phase in ["intro", "play", "grapple", "caught"]:
 		pause_game(true)
 
 func _exit_tree() -> void:
