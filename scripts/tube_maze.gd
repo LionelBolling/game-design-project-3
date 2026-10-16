@@ -2,6 +2,7 @@ extends Node3D
 const Geo = preload("res://scripts/geometry.gd")
 const MODEL = preload("res://Blender models/tube maze.glb")
 const PUZZLE_MODELS = preload("res://Blender models/keys and levers.glb")
+const AbyssFx = preload("res://scripts/maze_abyss.gd")
 const PATHS = preload("res://scripts/maze_paths.json")
 const COLORS := {"red": Color("e94f48"), "blue": Color("4c91ed"), "yellow": Color("ead24d"), "green": Color("5de087"), "black": Color("c5c0e1")}
 const UPPER_ENTRY := Vector3(0.25, 4.42, 25.9)
@@ -25,6 +26,10 @@ var corridor_cells := {}
 const GRID := 0.4
 const GRID_MIN := Vector2(-42.0, -31.2)
 const CORRIDOR_RADIUS := 1.08
+const WINDOW_CENTERS := [Vector2(19.8, -10.8), Vector2(29.6, -8.6), Vector2(-14.4, 17.8)]
+const WINDOW_NORMALS := [Vector2i.LEFT, Vector2i.UP, Vector2i.UP]
+var window_nodes: Array[Node3D] = []
+var abyss_fx: Node3D
 
 func _ready() -> void:
 	name = "TubeMaze"
@@ -34,7 +39,7 @@ func _ready() -> void:
 		var mesh := node as MeshInstance3D
 		var title := str(mesh.name)
 		source_count += 1
-		if title.begins_with("MODULE_") or title == "Cube" or title.begins_with("Text"):
+		if title.begins_with("MODULE_") or title == "Cube" or title.begins_with("Text") or title.begins_with("BubbleWindow"):
 			mesh.hide()
 			continue
 		if title.begins_with("Tube_") or title.begins_with("HollowJunction_") or title.begins_with("CompBridge_") or title.begins_with("EndpointBridge_"):
@@ -73,6 +78,7 @@ func _ready() -> void:
 		batch_count += 1
 	_groups.clear()
 	_build_connected_tubes()
+	_build_abyss_windows()
 	_raise_puzzle_items()
 	_install_puzzle_models()
 	_build_keyholes()
@@ -99,6 +105,40 @@ func _ready() -> void:
 		light.omni_range = 15
 		add_child(light)
 	print("TUBE MAZE: %d source meshes -> %d batches" % [source_count, batch_count])
+	abyss_fx = Node3D.new()
+	abyss_fx.set_script(AbyssFx)
+	add_child(abyss_fx)
+	abyss_fx.setup(window_nodes)
+
+func set_abyss_player(value: CharacterBody3D) -> void:
+	abyss_fx.player = value
+
+func _build_abyss_windows() -> void:
+	var frame_material := Geo.material(Color("253f4c"), 0.55, 0.1)
+	var glass := Geo.material(Color(0.23, 0.48, 0.53, 0.16), 0.08)
+	glass.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var abyss_material := ShaderMaterial.new()
+	abyss_material.shader = preload("res://shaders/abyss_backdrop.gdshader")
+	for index in WINDOW_CENTERS.size():
+		var center: Vector2 = WINDOW_CENTERS[index]
+		var normal: Vector2i = WINDOW_NORMALS[index]
+		var window := Node3D.new()
+		window.name = "AbyssWindow_%d" % index
+		window.position = Vector3(center.x, 5.25, center.y)
+		window.rotation.y = atan2(float(normal.x), float(normal.y))
+		add_child(window)
+		window_nodes.append(window)
+		for side in [-1.0, 1.0]:
+			Geo.box(window, Vector3(side * 0.72, 0, 0), Vector3(0.13, 1.37, 0.14), frame_material)
+			Geo.box(window, Vector3(0, side * 0.62, 0), Vector3(1.54, 0.13, 0.14), frame_material)
+		var pane := QuadMesh.new()
+		pane.size = Vector2(1.36, 1.16)
+		Geo.mesh(window, pane, Vector3(0, 0, 0.02), glass)
+		var backdrop := QuadMesh.new()
+		backdrop.size = Vector2(1.38, 1.18)
+		var backdrop_node := Geo.mesh(window, backdrop, Vector3(0, 0, 0.24), abyss_material)
+		backdrop_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 func _raise_puzzle_items() -> void:
 	for color in COLORS:
@@ -272,8 +312,9 @@ func _build_connected_tubes() -> void:
 			_connect_marker(Vector2(door.global_position.x, door.global_position.z))
 	var floor_tool := SurfaceTool.new()
 	var wall_tool := SurfaceTool.new()
+	var wall_collision_tool := SurfaceTool.new()
 	var ceiling_tool := SurfaceTool.new()
-	for tool in [floor_tool, wall_tool, ceiling_tool]:
+	for tool in [floor_tool, wall_tool, wall_collision_tool, ceiling_tool]:
 		tool.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var floor_material: StandardMaterial3D = Geo.material(Color("344854"), 0.2, 0.55)
 	var wall_material: StandardMaterial3D = Geo.material(Color("567385"), 0.2, 0.55)
@@ -282,6 +323,7 @@ func _build_connected_tubes() -> void:
 		material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	floor_tool.set_material(floor_material)
 	wall_tool.set_material(wall_material)
+	wall_collision_tool.set_material(wall_material)
 	ceiling_tool.set_material(ceiling_material)
 	for cell in corridor_cells:
 		var p := _grid_point(cell)
@@ -292,13 +334,15 @@ func _build_connected_tubes() -> void:
 		_quad(floor_tool, Vector3(x0, 4.22, z1), Vector3(x1, 4.22, z1), Vector3(x1, 4.22, z0), Vector3(x0, 4.22, z0))
 		_quad(ceiling_tool, Vector3(x0, 6.28, z0), Vector3(x1, 6.28, z0), Vector3(x1, 6.28, z1), Vector3(x0, 6.28, z1))
 		if not corridor_cells.has(cell + Vector2i.LEFT):
-			_quad(wall_tool, Vector3(x0, 4.22, z1), Vector3(x0, 4.22, z0), Vector3(x0, 6.28, z0), Vector3(x0, 6.28, z1))
+			_tube_wall(wall_tool, wall_collision_tool, Vector3(x0, 4.22, z1), Vector3(x0, 4.22, z0), Vector3(x0, 6.28, z0), Vector3(x0, 6.28, z1), Vector2(x0, p.y), Vector2i.LEFT)
 		if not corridor_cells.has(cell + Vector2i.RIGHT):
-			_quad(wall_tool, Vector3(x1, 4.22, z0), Vector3(x1, 4.22, z1), Vector3(x1, 6.28, z1), Vector3(x1, 6.28, z0))
+			_tube_wall(wall_tool, wall_collision_tool, Vector3(x1, 4.22, z0), Vector3(x1, 4.22, z1), Vector3(x1, 6.28, z1), Vector3(x1, 6.28, z0), Vector2(x1, p.y), Vector2i.RIGHT)
 		if not corridor_cells.has(cell + Vector2i.UP):
-			_quad(wall_tool, Vector3(x0, 4.22, z0), Vector3(x1, 4.22, z0), Vector3(x1, 6.28, z0), Vector3(x0, 6.28, z0))
+			_tube_wall(wall_tool, wall_collision_tool, Vector3(x0, 4.22, z0), Vector3(x1, 4.22, z0), Vector3(x1, 6.28, z0), Vector3(x0, 6.28, z0), Vector2(p.x, z0), Vector2i.UP)
 		if not corridor_cells.has(cell + Vector2i.DOWN):
-			_quad(wall_tool, Vector3(x1, 4.22, z1), Vector3(x0, 4.22, z1), Vector3(x0, 6.28, z1), Vector3(x1, 6.28, z1))
+			_tube_wall(wall_tool, wall_collision_tool, Vector3(x1, 4.22, z1), Vector3(x0, 4.22, z1), Vector3(x0, 6.28, z1), Vector3(x1, 6.28, z1), Vector2(p.x, z1), Vector2i.DOWN)
+	wall_collision_tool.generate_normals()
+	var collision_walls: ArrayMesh = wall_collision_tool.commit()
 	for tool in [floor_tool, wall_tool, ceiling_tool]:
 		tool.generate_normals()
 		var mesh: ArrayMesh = tool.commit()
@@ -308,10 +352,27 @@ func _build_connected_tubes() -> void:
 		var body := StaticBody3D.new()
 		body.name = "ConnectedTubeFloor" if tool == floor_tool else ("ConnectedTubeWalls" if tool == wall_tool else "ConnectedTubeCeiling")
 		var shape := CollisionShape3D.new()
-		shape.shape = mesh.create_trimesh_shape()
+		shape.shape = (collision_walls if tool == wall_tool else mesh).create_trimesh_shape()
 		(shape.shape as ConcavePolygonShape3D).backface_collision = true
 		body.add_child(shape)
 		add_child(body)
+
+func _tube_wall(visual: SurfaceTool, collision: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, edge: Vector2, normal: Vector2i) -> void:
+	_quad(collision, a, b, c, d)
+	var window_index := -1
+	for index in WINDOW_CENTERS.size():
+		if WINDOW_NORMALS[index] == normal and edge.distance_to(WINDOW_CENTERS[index]) <= 0.69:
+			window_index = index
+			break
+	if window_index < 0:
+		_quad(visual, a, b, c, d)
+		return
+	var lower_a := a + Vector3.UP * 0.45
+	var lower_b := b + Vector3.UP * 0.45
+	var upper_c := c - Vector3.UP * 0.45
+	var upper_d := d - Vector3.UP * 0.45
+	_quad(visual, a, b, lower_b, lower_a)
+	_quad(visual, upper_d, upper_c, c, d)
 
 func _quad(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
 	for point in [a, b, c, a, c, d]:

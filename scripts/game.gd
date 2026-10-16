@@ -364,6 +364,7 @@ func _swap_to_maze() -> void:
 	maze.set_script(MazeScript)
 	add_child(maze)
 	world = maze
+	maze.set_abyss_player(player)
 	player.position = MazeScript.UPPER_ENTRY + Vector3(0, 3.65, 0)
 	player.rotation.y = 0.0
 	player.pitch = 0.3
