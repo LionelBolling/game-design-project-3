@@ -53,6 +53,9 @@ func _sea_creature(huge: bool) -> Node3D:
 	add_child(creature)
 	var skin := Geo.material(Color("0d2732") if huge else Color("456b78"), 0.1, 0.05)
 	var underside := Geo.material(Color("273b45") if huge else Color("a1b3b4"), 0.05, 0.04)
+	if huge:
+		skin.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		underside.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	var body := Geo.sphere(creature, Vector3.ZERO, 1.0, skin)
 	body.scale = Vector3(2.4, 0.78, 0.7)
 	var belly := Geo.sphere(creature, Vector3(-0.35, -0.42, 0), 0.65, underside)
@@ -80,7 +83,7 @@ func _sea_creature(huge: bool) -> Node3D:
 			mesh.radial_segments = 3
 			Geo.mesh(creature, mesh, Vector3(-2.57 + tooth * 0.08, -0.41, side * (0.08 + tooth * 0.06)), underside)
 	if huge:
-		creature.scale = Vector3.ONE * 3.0
+		creature.scale = Vector3.ONE * 4.5
 		creature.rotation.z = -PI / 2
 	return creature
 
@@ -117,7 +120,7 @@ func animate(time: float) -> void:
 		shark.visible = time < 2.95
 		# The larger silhouette breaches upward 1.5 seconds after the shark leaves.
 		leviathan.visible = time >= 4.45 and time < 5.65
-		leviathan.position = Vector3(-5.0, lerpf(-69.0, -35.0, clampf((time - 4.45) / 0.8, 0.0, 1.0)), -17.0)
+		leviathan.position = Vector3(5.0, lerpf(-76.0, -54.0, clampf((time - 4.45) / 0.8, 0.0, 1.0)), -17.0)
 		var hit := clampf((time - 5.0) / 0.6, 0.0, 1.0)
 		cover_ball.position = Vector3(0, -0.08, lerpf(-5.0, -0.15, hit) + maxf(0.0, time - 5.8) * 2.0)
 		cover_ball.scale = Vector3.ONE * lerpf(0.2, 2.6, hit)

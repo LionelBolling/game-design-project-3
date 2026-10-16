@@ -7,6 +7,7 @@ const StalkerScript = preload("res://scripts/stalker.gd")
 const DepthScript = preload("res://scripts/ball_depth.gd")
 const MazeScript = preload("res://scripts/tube_maze.gd")
 const TransitionScript = preload("res://scripts/transition_fx.gd")
+const CentipedeScript = preload("res://scripts/maze_centipede.gd")
 
 var player: CharacterBody3D
 var world: Node3D
@@ -40,6 +41,12 @@ var maze_color := ""
 var transition_fx: Node3D
 var loading_origin := Vector3.ZERO
 var loading_swapped := false
+var loading_sound_played := false
+var centipede: Node3D
+var maze_hidden := false
+var maze_deaths := 0
+var maze_dying := false
+var maze_death_time := 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -106,17 +113,23 @@ func _environment() -> void:
 
 func _items() -> void:
 	var brass := Geo.material(Color("bea56e"), 0.6)
-	var ceramic := Geo.material(Color("cac9b5"))
+	var fuse_glow := Geo.material(Color("90cda0"), 0.0, 0.45)
 	for pos in world.FUSE_POSITIONS:
 		var item := Node3D.new()
 		item.position = pos
 		add_child(item)
-		var fuse := Geo.cylinder(item, Vector3.ZERO, 0.055, 0.28, ceramic)
+		var fuse := Geo.cylinder(item, Vector3.ZERO, 0.055, 0.28, fuse_glow)
 		fuse.rotation.z = PI / 2
 		for x in [-0.12, 0.12]:
 			var cap := Geo.cylinder(item, Vector3(x, 0, 0), 0.059, 0.06, brass)
 			cap.rotation.z = PI / 2
-		world._light(pos + Vector3(0, 0.1, 0), Color("82b8a5"), 0.35, 1.25)
+		var glow := OmniLight3D.new()
+		glow.position = Vector3(0, 0.1, 0)
+		glow.light_color = Color("71d997")
+		glow.light_energy = 0.28
+		glow.omni_range = 1.15
+		glow.shadow_enabled = false
+		item.add_child(glow)
 		items.append({"node": item, "kind": "fuse", "label": "E  /  Take emergency fuse", "taken": false})
 	for pos in world.CELL_POSITIONS:
 		var cell := Node3D.new()
@@ -140,7 +153,7 @@ func _items() -> void:
 
 func _audio() -> void:
 	AudioServer.set_bus_volume_db(0, linear_to_db(0.8))
-	for key in ["pickup", "sting", "power"]:
+	for key in ["pickup", "sting", "power", "balls_wade", "shark_swim", "shark_bite", "leviathan_rise", "centipede_legs", "centipede_attack"]:
 		var audio := AudioStreamPlayer.new()
 		audio.stream = load("res://audio/%s.wav" % key)
 		audio.process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -241,6 +254,9 @@ func _process(delta: float) -> void:
 	elif phase == "loading":
 		loading_time += delta
 		_animate_transition()
+		if loading_to == "maze" and loading_time >= 4.45 and not loading_sound_played:
+			loading_sound_played = true
+			sound("leviathan_rise")
 		if loading_to == "depth" and loading_time >= 1.35 and not loading_swapped:
 			_swap_to_depth()
 		if loading_to == "maze" and loading_time >= 5.55 and not loading_swapped:
@@ -262,6 +278,11 @@ func _process(delta: float) -> void:
 		if player.position.y < -49.8 and player.position.y > -55.5 and player.position.x < -12.1 and absf(player.position.z + 17.0) < 2.2:
 			_start_loading("maze")
 	elif phase == "maze":
+		if maze_dying:
+			maze_death_time += delta
+			if maze_death_time >= 0.9:
+				restart_maze()
+			return
 		elapsed += delta
 		interaction_clock -= delta
 		if interaction_clock <= 0:
@@ -283,6 +304,7 @@ func _start_loading(destination: String) -> void:
 	loading_to = destination
 	loading_time = 0.0
 	loading_swapped = false
+	loading_sound_played = false
 	loading_origin = player.position
 	phase = "loading"
 	player.control_enabled = false
@@ -291,6 +313,9 @@ func _start_loading(destination: String) -> void:
 	prompt = ""
 	message_time = 0
 	transition_fx.begin(destination)
+	if destination == "depth":
+		ambient.stop()
+		nightmare_ambient.stop()
 	if destination == "maze":
 		sound("sting")
 	hud.queue_redraw()
@@ -365,11 +390,53 @@ func _swap_to_maze() -> void:
 	add_child(maze)
 	world = maze
 	maze.set_abyss_player(player)
+	_spawn_centipede(maze)
 	player.position = MazeScript.UPPER_ENTRY + Vector3(0, 3.65, 0)
 	player.rotation.y = 0.0
 	player.pitch = 0.3
 	player.camera.rotation.x = player.pitch
 	player.velocity = Vector3.ZERO
+
+func _spawn_centipede(maze: Node3D) -> void:
+	centipede = Node3D.new()
+	centipede.set_script(CentipedeScript)
+	add_child(centipede)
+	centipede.setup(maze, player, self, maze_deaths > 0)
+
+func restart_maze() -> void:
+	if phase != "maze":
+		return
+	maze_deaths += 1
+	maze_dying = false
+	maze_death_time = 0.0
+	maze_hidden = false
+	player.movement_locked = false
+	player.control_enabled = true
+	player.position = MazeScript.SPAWN
+	player.velocity = Vector3.ZERO
+	player.flashlight_hidden_when_off = false
+	player.hand.show()
+	player.set_battery_system_enabled(false)
+	player.set_flashlight(true)
+	centipede.queue_free()
+	world.queue_free()
+	var maze := Node3D.new()
+	maze.set_script(MazeScript)
+	add_child(maze)
+	world = maze
+	maze.set_abyss_player(player)
+	_spawn_centipede(maze)
+	hud.lens_material.set_shader_parameter("danger", 0.0)
+
+func begin_maze_jumpscare() -> void:
+	if phase != "maze" or maze_dying:
+		return
+	maze_dying = true
+	maze_death_time = 0.0
+	player.control_enabled = false
+	player.velocity = Vector3.ZERO
+	hud.lens_material.set_shader_parameter("danger", 1.0)
+	sound("centipede_attack")
 
 func _finish_loading() -> void:
 	if not loading_swapped:
@@ -383,6 +450,9 @@ func _finish_loading() -> void:
 	if loading_to == "depth":
 		player.position.y = -3.4
 		player.swimming = true
+		player.set_battery_system_enabled(true)
+		player.flashlight_hidden_when_off = true
+		player.set_flashlight(false)
 		phase = "depth"
 		objective = "Swim toward the green tube"
 		say("Swim with Space and Ctrl. The green light waits below.", 5)
@@ -392,12 +462,27 @@ func _finish_loading() -> void:
 		player.camera.rotation = Vector3.ZERO
 		player.pitch = 0.0
 		player.swimming = false
+		player.flashlight_hidden_when_off = false
+		player.hand.show()
+		player.set_battery_system_enabled(false)
+		player.set_flashlight(true)
 		player.fall_speed_limit = 100.0
 		phase = "maze"
 		objective = "Find the keys and activate five circuits"
 		say("Find four colored keys. Turn on every light. The black lock is in the circle.", 7)
 	player.control_enabled = true
+	hud.lens_material.set_shader_parameter("darkness", 0.0)
 	hud.queue_redraw()
+
+func restart_depth() -> void:
+	if phase != "depth":
+		return
+	depth_loops = 0
+	player.position = Vector3(0, -3.4, -13.2)
+	player.velocity = Vector3.ZERO
+	player.set_flashlight(false)
+	world.reset_threat()
+	hud.lens_material.set_shader_parameter("danger", 0.0)
 
 func _find_interaction() -> void:
 	current_item = -1
@@ -466,6 +551,15 @@ func _find_maze_interaction() -> void:
 	maze_color = ""
 	prompt = ""
 	var best := 2.8
+	if maze_hidden:
+		maze_kind = "hide"
+		prompt = "E  /  Leave hiding spot"
+		return
+	var nearby_spot: Node3D = world.closest_hide_spot(player.global_position)
+	if nearby_spot:
+		best = player.global_position.distance_to(nearby_spot.global_position)
+		maze_kind = "hide"
+		prompt = "E  /  Hide"
 	for color in ["red", "blue", "yellow", "green", "black"]:
 		if not world.keys[color]:
 			var key_node := world.key_nodes[color] as Node3D
@@ -485,7 +579,10 @@ func _find_maze_interaction() -> void:
 				prompt = "E  /  Pull %s lever" % color
 			var door_node := world.doors[color] as Node3D
 			var sockets := world.keyhole_nodes[color] as Node3D
-			var door_distance := minf(player.global_position.distance_to(sockets.to_global(Vector3(0.72, 0, -0.58))), player.global_position.distance_to(sockets.to_global(Vector3(0.72, 0, 0.58))))
+			var door_distance := INF
+			for socket in sockets.get_children():
+				if str(socket.name).begins_with("WallLock_"):
+					door_distance = minf(door_distance, player.global_position.distance_to((socket as Node3D).global_position))
 			if door_node.visible and door_distance < best:
 				best = door_distance
 				maze_kind = "door"
@@ -512,6 +609,15 @@ func _interact_maze() -> void:
 	_find_maze_interaction()
 	if maze_kind.is_empty():
 		return
+	if maze_kind == "hide":
+		maze_hidden = not maze_hidden
+		player.movement_locked = maze_hidden
+		if maze_hidden:
+			var spot: Node3D = world.closest_hide_spot(player.global_position)
+			if spot:
+				player.position = spot.global_position + Vector3.UP * 0.19
+		_find_maze_interaction()
+		return
 	if maze_kind == "final" and world.final_open:
 		finish(true)
 	else:
@@ -522,6 +628,8 @@ func _interact_maze() -> void:
 	_find_maze_interaction()
 
 func replace_cell() -> void:
+	if phase != "play":
+		return
 	if spare_cells <= 0:
 		say("No spare cells. Check the booth tables.")
 	elif player.battery >= 95:
@@ -605,7 +713,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_interact_maze()
 			else:
 				interact()
-		if event.is_action_pressed("reload_cell"):
+		if phase == "play" and event.is_action_pressed("reload_cell"):
 			replace_cell()
 
 func _notification(what: int) -> void:

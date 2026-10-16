@@ -14,6 +14,7 @@ func run() -> void:
 	var ok: bool = maze.window_nodes.size() == 3
 	for index in maze.window_nodes.size():
 		var window: Node3D = maze.window_nodes[index]
+		ok = ok and window.find_child("CircularWindowModel", true, false) != null
 		var inside: Vector3 = window.global_position - window.global_basis.z * 1.0
 		var outside: Vector3 = window.global_position + window.global_basis.z * 1.0
 		var query := PhysicsRayQueryParameters3D.create(inside, outside)
@@ -22,7 +23,7 @@ func run() -> void:
 		ok = ok and (hit.get("collider") as Node).name == "ConnectedTubeWalls"
 	for animation_id in range(6):
 		fx.start_variant(animation_id % 3, animation_id)
-		ok = ok and fx.silhouette.visible and absf(fx.silhouette.position.x) > 1.0
+		ok = ok and fx.silhouette.visible and absf(fx.silhouette.position.x) > 0.5
 		fx.advance(fx.PASS_DURATION * 0.5)
 		ok = ok and fx.silhouette.visible and absf(fx.silhouette.position.x) < 0.2
 		fx.advance(fx.PASS_DURATION * 0.51)

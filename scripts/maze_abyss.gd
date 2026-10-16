@@ -19,7 +19,7 @@ var previous_window := -1
 func setup(views: Array[Node3D]) -> void:
 	windows = views
 	var shape := QuadMesh.new()
-	shape.size = Vector2(1.02, 0.53)
+	shape.size = Vector2(0.62, 0.32)
 	silhouette_material = ShaderMaterial.new()
 	silhouette_material.shader = preload("res://shaders/abyss_leviathan.gdshader")
 	silhouette = MeshInstance3D.new()
@@ -96,7 +96,7 @@ func _pose() -> void:
 	var y := 0.0
 	var roll := 0.0
 	var facing := 1.0
-	var opacity := 0.57
+	var opacity := 0.39
 	if variant < SWIM_VARIANTS:
 		var u := clampf(t / PASS_DURATION, 0.0, 1.0)
 		match variant:
@@ -144,7 +144,7 @@ func _pose() -> void:
 		if t > 5.2:
 			x += (t - 5.2) * (5.8 if idle == 1 else -5.8)
 		opacity *= smoothstep(0.0, 0.6, t) * (1.0 - smoothstep(5.9, IDLE_DURATION, t))
-	silhouette.position = Vector3(x * 0.12, y * 0.2, 0.14)
+	silhouette.position = Vector3(x * 0.07, y * 0.08 - 0.1, 0.14)
 	silhouette.rotation = Vector3(0, 0, roll)
 	silhouette.scale = Vector3(facing, 1.0, 1.0)
 	silhouette_material.set_shader_parameter("opacity", opacity)

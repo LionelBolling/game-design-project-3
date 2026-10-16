@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Maze = preload("res://scripts/tube_maze.gd")
+const ENDS = preload("res://scripts/maze_yellow_endpoints.json")
 
 var maze: Node3D
 var walker: CharacterBody3D
@@ -32,7 +33,7 @@ func _nearest_safe(at: Vector3) -> Vector2i:
 			result = cell
 	return result
 
-func _route(start: Vector2i, target: Vector3) -> Array[Vector2i]:
+func _route(start: Vector2i, target: Vector3, goal_radius: float = 2.2) -> Array[Vector2i]:
 	var queue: Array[Vector2i] = [start]
 	var parent := {start: start}
 	var index := 0
@@ -40,7 +41,7 @@ func _route(start: Vector2i, target: Vector3) -> Array[Vector2i]:
 	while index < queue.size():
 		var cell := queue[index]
 		index += 1
-		if _point(cell).distance_to(Vector3(target.x, 4.26, target.z)) < 2.2:
+		if _point(cell).distance_to(Vector3(target.x, 4.26, target.z)) < goal_radius:
 			goal = cell
 			break
 		for direction in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.UP, Vector2i.DOWN]:
@@ -93,20 +94,33 @@ func run() -> void:
 	await physics_frame
 	var locked_entry := _nearest_safe(Maze.UPPER_ENTRY)
 	for color in ["red", "blue", "yellow", "green"]:
-		check(not _route(locked_entry, maze.key_nodes[color].global_position).is_empty(), "%s key can be reached with colored doors locked" % color)
+		var reachable := not _route(locked_entry, maze.key_nodes[color].global_position).is_empty()
+		check(reachable == (color == "green"), "%s key respects the locked route" % color)
 		var door := maze.doors[color] as Node3D
 		var normal := Vector3.FORWARD if color in ["red", "yellow"] else Vector3.RIGHT
-		var ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.5, door.global_position + normal * 1.5, 1)
+		var ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.2, door.global_position + normal * 1.2, 1)
 		var hit := maze.get_world_3d().direct_space_state.intersect_ray(ray)
 		check(not hit.is_empty() and hit.collider == maze.door_bodies[color], "%s door blocks its passage" % color)
 		var across := Vector3.RIGHT if color in ["red", "yellow"] else Vector3.FORWARD
 		for side in [-0.65, 0.65]:
 			var sidestep: Vector3 = across * float(side)
-			var edge_ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.5 + sidestep, door.global_position + normal * 1.5 + sidestep, 1)
+			var edge_ray := PhysicsRayQueryParameters3D.create(door.global_position - normal * 1.2 + sidestep, door.global_position + normal * 1.2 + sidestep, 1)
 			var edge_hit := maze.get_world_3d().direct_space_state.intersect_ray(edge_ray)
 			check(not edge_hit.is_empty() and edge_hit.collider == maze.door_bodies[color], "%s gate cannot be passed at side %.2f" % [color, side])
 	var caps := maze.find_children("Collision_Cap_*", "StaticBody3D", false, false)
-	check(caps.size() == 22, "Only the 22 marked endpoints have cap collisions")
+	check(caps.is_empty(), "Outdated imported caps no longer block the highlighted route")
+	for endpoint in ENDS.data.points:
+		var mark := Vector2(float(endpoint[0]), float(endpoint[1]))
+		var best := INF
+		for cell in maze.corridor_cells:
+			for direction in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				if maze.is_open_neighbor(cell, cell + direction):
+					continue
+				var edge: Vector2 = maze._grid_point(cell) + Vector2(direction) * maze.GRID * 0.5
+				best = minf(best, edge.distance_to(mark))
+		if best > 1.6:
+			print("OPEN YELLOW END ", mark, " nearest wall=", best)
+		check(best <= 1.6, "Yellow endpoint %s is capped by a tube wall" % mark)
 	for body in maze.door_bodies.values():
 		(body as Node).queue_free()
 	await physics_frame
@@ -119,6 +133,9 @@ func run() -> void:
 		destinations.append(maze.lever_nodes[color])
 	destinations.append(maze.find_child("Cabinet_Black_Lock", true, false))
 	destinations.append(maze.find_child("Final_Exit_Door", true, false))
+	for spot in maze.hide_spots:
+		destinations.append(spot)
+		check(_point(_nearest_safe(spot.global_position)).distance_to(Vector3(spot.global_position.x, 4.26, spot.global_position.z)) < 1.7, "%s can be entered from the corridor" % spot.name)
 	for target in destinations:
 		var route := _route(entry, target.global_position)
 		var reached := not route.is_empty()

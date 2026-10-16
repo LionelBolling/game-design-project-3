@@ -17,6 +17,13 @@ func run() -> void:
 	await create_timer(0.4).timeout
 	game.hud.show_menu("options_home")
 	await capture("act-options")
+	game.hud.show_menu("")
+	game.finish_intro()
+	game.player.position = game.world.FUSE_APPROACHES[0]
+	game.player.camera.look_at(game.world.FUSE_POSITIONS[0])
+	game.player.pitch = game.player.camera.rotation.x
+	await create_timer(0.2).timeout
+	await capture("act-fuse-glow")
 	game.skip_to_depth()
 	await create_timer(0.4).timeout
 	await capture("act-depth-start")
@@ -37,9 +44,9 @@ func run() -> void:
 	game._start_loading("maze")
 	await create_timer(1.0).timeout
 	await capture("act-maze-shark")
-	await create_timer(3.6).timeout
+	await create_timer(4.1).timeout
 	await capture("act-maze-leviathan")
-	await create_timer(0.85).timeout
+	await create_timer(0.35).timeout
 	await capture("act-maze-ball")
 	await create_timer(1.05).timeout
 	await capture("act-maze-getup")
@@ -50,6 +57,19 @@ func run() -> void:
 	game.player.pitch = 0.0
 	game.player.camera.rotation = Vector3.ZERO
 	await capture("act-maze-tube")
+	var vent_spot: Node3D = game.world.hide_spots[0]
+	var vent_model := vent_spot.find_child("VentModel", false, false) as Node3D
+	var from_wall := (vent_spot.global_position - vent_model.global_position).normalized()
+	game.player.position = vent_spot.global_position + from_wall * 1.0
+	game.player.camera.look_at(vent_model.global_position)
+	await capture("act-maze-vent")
+	game.player.position = Vector3(0, 4.42, 3.8)
+	game.player.camera.look_at(Vector3(0, 4.3, 0))
+	await capture("act-maze-hatch")
+	var window: Node3D = game.world.window_nodes[0]
+	game.player.position = window.global_position - window.global_basis.z * 1.7 - Vector3.UP * 0.98
+	game.player.camera.look_at(window.global_position)
+	await capture("act-maze-window")
 	var red_key := game.world.key_nodes.red as Node3D
 	game.player.position = red_key.global_position + Vector3(0, -0.98, 1.5)
 	game.player.camera.look_at(red_key.global_position)
