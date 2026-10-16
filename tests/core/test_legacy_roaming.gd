@@ -178,3 +178,14 @@ func test_stops_when_the_run_is_over() -> void:
 	assert_eq(ronald.global_position, Vector3(0, 0.12, 0))
 	assert_false(ronald.chasing)
 	assert_eq(board.enemy_velocity, Vector3.ZERO)
+
+
+func test_wakes_him_once_and_never_drags_him_back_to_his_spawn() -> void:
+	_rules(BoardTypes.Mode.INVESTIGATE, Vector3(10, 0, 0), 2.0)
+	_tick()
+	ronald.active = false # the game took him out of play
+	var at := ronald.global_position
+	_tick()
+	assert_false(ronald.active, "not woken again")
+	assert_eq(ronald.global_position, at, "and he stays where he is")
+	assert_eq(board.enemy_velocity, Vector3.ZERO)

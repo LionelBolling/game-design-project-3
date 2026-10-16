@@ -4,7 +4,8 @@ extends SimSystem
 ## mock's Ronald (scripts/stalker.gd) walks where the Ruleset says, at its
 ## speed, on the mock's navigation grid, and this reports back on the board.
 ## He picks his own patrol spots, and poses where he stands (the F5
-## restaurant has no statue bench yet).
+## restaurant has no statue bench yet). He's woken once, when the rules wake
+## him; if the game later takes him out of play (active = false), he stays put.
 
 const ARRIVE := 0.5 # m: this close to the target counts as there
 const PATROL_AREA := Rect2(-33, -22, 66, 44) # where he picks patrol spots, as the mock
@@ -25,6 +26,7 @@ var _path := PackedVector2Array()
 var _goal := Vector3.INF # where _path leads
 var _mode: BoardTypes.Mode = BoardTypes.Mode.DORMANT
 var _patrol_wait := 0.0
+var _woken := false
 
 
 func _init() -> void:
@@ -45,8 +47,15 @@ func tick(board: Blackboard, delta: float) -> void:
 		board.at_target = false
 		stalker.set("chasing", false)
 		return
-	if not bool(stalker.get("active")):
-		stalker.call("awaken")
+	if not _woken:
+		_woken = true
+		if not bool(stalker.get("active")):
+			stalker.call("awaken")
+	elif not bool(stalker.get("active")):
+		board.enemy_velocity = Vector3.ZERO
+		board.at_target = false
+		stalker.set("chasing", false)
+		return
 	if mode != _mode:
 		_mode = mode
 		_path.clear()

@@ -2,7 +2,8 @@ class_name LegacySenses
 extends SimSystem
 ## Enemy Senses' stand-in for the F5 game until Aiden's system replaces it.
 ## The mock's own sight (12 m, walls block, using the mock Ronald's ray) and
-## the senses stub's hearing. Ronald senses nothing while he's DORMANT.
+## the senses stub's hearing. Ronald senses nothing while he's DORMANT or
+## the game has taken him out of play (the mock's active = false).
 
 const SIGHT := 12.0 # m, the mock's CHASE_DISTANCE
 const HEARING := 10.0 # m at full noise, as SensesStub
@@ -16,7 +17,7 @@ func _init() -> void:
 
 
 func tick(board: Blackboard, _delta: float) -> void:
-	var awake := board.ronald_mode != BoardTypes.Mode.DORMANT
+	var awake := board.ronald_mode != BoardTypes.Mode.DORMANT and _in_play()
 	var distance := board.enemy_position.distance_to(board.player_position)
 	var exposed := board.hide_state == BoardTypes.Hide.EXPOSED
 	if awake and exposed and distance <= SIGHT and can_see_player():
@@ -27,6 +28,10 @@ func tick(board: Blackboard, _delta: float) -> void:
 		board.detection = BoardTypes.Detect.NONE
 	if board.detection != BoardTypes.Detect.NONE:
 		board.last_known_position = board.player_position
+
+
+func _in_play() -> bool:
+	return stalker == null or bool(stalker.get("active"))
 
 
 ## Nothing solid between Ronald's eyes and the player's. Tests replace it.

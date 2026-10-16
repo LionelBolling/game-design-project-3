@@ -73,3 +73,17 @@ func test_senses_nothing_while_ronald_is_dormant() -> void:
 	board.player_noise = 1.0
 	_tick()
 	assert_eq(board.detection, BoardTypes.Detect.NONE)
+
+
+func test_senses_nothing_while_ronald_is_out_of_play() -> void:
+	senses.stalker = OutOfPlay.new()
+	autofree(senses.stalker)
+	board.player_noise = 1.0
+	_tick()
+	assert_eq(board.detection, BoardTypes.Detect.NONE)
+
+
+## The mock Ronald after the game set active = false.
+class OutOfPlay:
+	extends Node3D
+	var active := false
