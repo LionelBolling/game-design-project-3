@@ -34,4 +34,18 @@ func run() -> void:
 	game.player.camera.look_at(Vector3(0, 5, 25))
 	game.player.pitch = game.player.camera.rotation.x
 	await capture("act-maze-entry")
+	game.player.position = game.world.UPPER_ENTRY
+	game.player.rotation.y = 0.0
+	game.player.pitch = 0.0
+	game.player.camera.rotation = Vector3.ZERO
+	await capture("act-maze-tube")
+	var overhead := Camera3D.new()
+	overhead.projection = Camera3D.PROJECTION_ORTHOGONAL
+	overhead.size = 105.0
+	overhead.far = 150.0
+	overhead.position = Vector3(0, 75, 0)
+	game.add_child(overhead)
+	overhead.look_at(Vector3.ZERO, Vector3(0, 0, -1))
+	overhead.current = true
+	await capture("act-maze-overhead")
 	quit()

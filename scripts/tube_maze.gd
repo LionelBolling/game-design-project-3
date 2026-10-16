@@ -1,6 +1,7 @@
 extends Node3D
 const Geo = preload("res://scripts/geometry.gd")
 const MODEL = preload("res://Blender models/tube maze.glb")
+const PATHS = preload("res://scripts/maze_paths.json")
 const COLORS := {"red": Color("e94f48"), "blue": Color("4c91ed"), "yellow": Color("ead24d"), "green": Color("5de087"), "black": Color("c5c0e1")}
 const SPAWN := Vector3(0, 0.15, 28.0)
 const CLIMB := Vector3(0.3, 0.15, 27.4)
@@ -17,6 +18,10 @@ var source_count := 0
 var batch_count := 0
 var _groups := {}
 var final_open := false
+var corridor_cells := {}
+const GRID := 0.4
+const GRID_MIN := Vector2(-42.0, -31.2)
+const CORRIDOR_RADIUS := 1.08
 
 func _ready() -> void:
 	name = "TubeMaze"
@@ -27,6 +32,9 @@ func _ready() -> void:
 		var title := str(mesh.name)
 		source_count += 1
 		if title.begins_with("MODULE_") or title == "Cube" or title.begins_with("Text"):
+			mesh.hide()
+			continue
+		if title.begins_with("Tube_") or title.begins_with("HollowJunction_") or title.begins_with("CompBridge_") or title.begins_with("EndpointBridge_"):
 			mesh.hide()
 			continue
 		if title.ends_with("_Key"):
@@ -43,10 +51,10 @@ func _ready() -> void:
 		if title in ["Cabinet_Door", "Final_Exit_Door"]:
 			var bounds := mesh.global_transform * mesh.get_aabb()
 			door_bodies[title] = _box_collision(bounds.get_center(), bounds.size)
-		if title == "PlayPlace_Floor":
+		if title in ["PlayPlace_Floor", "CircleRoom_InnerFloor", "CircleRoom_OuterFloor", "Left_Room_Threshold", "South_Room_Threshold"]:
 			mesh.hide()
 			continue
-		if title.begins_with("Tube_") or title.begins_with("HollowJunction_") or title.begins_with("CompBridge_") or title.begins_with("EndpointBridge_") or title in ["Main_Entrance_Climb", "CircleRoom_InnerFloor", "CircleRoom_OuterFloor", "Left_Room_Threshold", "South_Room_Threshold"]:
+		if title == "Main_Entrance_Climb" or title.begins_with("RoomWallSeg") or title.begins_with("Cap_"):
 			_mesh_collision(mesh)
 		if not (title.ends_with("_Key") or title.ends_with("_Lever") or title.ends_with("_Door") or title.begins_with("Indicator_") or title.begins_with("Cabinet_") or title.begins_with("Black_Key_Cabinet")):
 			_batch(mesh)
@@ -58,9 +66,11 @@ func _ready() -> void:
 		add_child(instance)
 		batch_count += 1
 	_groups.clear()
+	_build_connected_tubes()
+	_raise_puzzle_items()
 	var ground := Geo.material(Color("242c38"))
-	Geo.box(self, Vector3(0, -0.12, 0), Vector3(96, 0.24, 62), ground)
-	_box_collision(Vector3(0, -0.12, 0), Vector3(96, 0.24, 62))
+	Geo.box(self, Vector3(0, -0.12, 27), Vector3(8, 0.24, 8), ground)
+	_box_collision(Vector3(0, -0.12, 27), Vector3(8, 0.24, 8))
 	for color in COLORS:
 		keys[color] = false
 		levers[color] = false
@@ -82,8 +92,118 @@ func _ready() -> void:
 		add_child(light)
 	print("TUBE MAZE: %d source meshes -> %d batches" % [source_count, batch_count])
 
+func _raise_puzzle_items() -> void:
+	for color in COLORS:
+		for suffix in ["Key", "Key_Pedestal", "Key_Ring"]:
+			var item := find_child("%s_%s" % [color.capitalize(), suffix], true, false) as Node3D
+			if item:
+				item.position.y += 4.3
+		if color == "black":
+			continue
+		for suffix in ["Lever", "Lever_Base", "Lever_Stem"]:
+			var item := find_child("%s_%s" % [color.capitalize(), suffix], true, false) as Node3D
+			if item:
+				item.position.y += 4.3
+
+func _grid_point(cell: Vector2i) -> Vector2:
+	return GRID_MIN + Vector2(cell) * GRID
+
+func _mark_disc(center: Vector2, radius: float) -> void:
+	var low := Vector2i(floori((center.x - radius - GRID_MIN.x) / GRID), floori((center.y - radius - GRID_MIN.y) / GRID))
+	var high := Vector2i(ceili((center.x + radius - GRID_MIN.x) / GRID), ceili((center.y + radius - GRID_MIN.y) / GRID))
+	for x in range(low.x, high.x + 1):
+		for z in range(low.y, high.y + 1):
+			var cell := Vector2i(x, z)
+			if _grid_point(cell).distance_squared_to(center) <= radius * radius:
+				corridor_cells[cell] = true
+
+func _connect_marker(center: Vector2) -> void:
+	var closest := center
+	var distance := INF
+	for cell in corridor_cells:
+		var point := _grid_point(cell)
+		var separation := center.distance_squared_to(point)
+		if separation < distance:
+			distance = separation
+			closest = point
+	var length := center.distance_to(closest)
+	for i in range(ceili(length / 0.2) + 1):
+		_mark_disc(center.lerp(closest, minf(1.0, i * 0.2 / maxf(length, 0.001))), 0.85)
+
+func _build_connected_tubes() -> void:
+	var paths: Array = PATHS.data.paths
+	for line in paths:
+		var a := Vector2(float(line[0][0]), float(line[0][1]))
+		var b := Vector2(float(line[1][0]), float(line[1][1]))
+		var length := a.distance_to(b)
+		for i in range(ceili(length / (GRID * 0.5)) + 1):
+			_mark_disc(a.lerp(b, minf(1.0, i * GRID * 0.5 / maxf(length, 0.001))), CORRIDOR_RADIUS)
+	for junction in PATHS.data.junctions:
+		_mark_disc(Vector2(float(junction[0]), float(junction[1])), 1.65)
+	# The centre circle is a room rather than a narrow passage.
+	_mark_disc(Vector2.ZERO, 5.15)
+	_mark_disc(Vector2(0, 5.7), 1.5)
+	_mark_disc(Vector2(-6.3, 0), 1.5)
+	# A short connector in the Blender route has a sub-metre gap at this junction.
+	_mark_disc(Vector2(-4.0, 22.0), 0.9)
+	for color in COLORS:
+		var key := key_nodes[color] as Node3D
+		_connect_marker(Vector2(key.global_position.x, key.global_position.z))
+		if color != "black":
+			var lever := lever_nodes[color] as Node3D
+			var door := doors[color] as Node3D
+			_connect_marker(Vector2(lever.global_position.x, lever.global_position.z))
+			_connect_marker(Vector2(door.global_position.x, door.global_position.z))
+	var floor_tool := SurfaceTool.new()
+	var wall_tool := SurfaceTool.new()
+	var ceiling_tool := SurfaceTool.new()
+	for tool in [floor_tool, wall_tool, ceiling_tool]:
+		tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var floor_material: StandardMaterial3D = Geo.material(Color("344854"), 0.2, 0.55)
+	var wall_material: StandardMaterial3D = Geo.material(Color("567385"), 0.2, 0.55)
+	var ceiling_material: StandardMaterial3D = Geo.material(Color("30404c"), 0.1, 0.4)
+	for material in [floor_material, wall_material, ceiling_material]:
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	floor_tool.set_material(floor_material)
+	wall_tool.set_material(wall_material)
+	ceiling_tool.set_material(ceiling_material)
+	for cell in corridor_cells:
+		var p := _grid_point(cell)
+		var x0 := p.x - GRID * 0.5
+		var x1 := p.x + GRID * 0.5
+		var z0 := p.y - GRID * 0.5
+		var z1 := p.y + GRID * 0.5
+		_quad(floor_tool, Vector3(x0, 4.22, z1), Vector3(x1, 4.22, z1), Vector3(x1, 4.22, z0), Vector3(x0, 4.22, z0))
+		_quad(ceiling_tool, Vector3(x0, 6.28, z0), Vector3(x1, 6.28, z0), Vector3(x1, 6.28, z1), Vector3(x0, 6.28, z1))
+		if not corridor_cells.has(cell + Vector2i.LEFT):
+			_quad(wall_tool, Vector3(x0, 4.22, z1), Vector3(x0, 4.22, z0), Vector3(x0, 6.28, z0), Vector3(x0, 6.28, z1))
+		if not corridor_cells.has(cell + Vector2i.RIGHT):
+			_quad(wall_tool, Vector3(x1, 4.22, z0), Vector3(x1, 4.22, z1), Vector3(x1, 6.28, z1), Vector3(x1, 6.28, z0))
+		if not corridor_cells.has(cell + Vector2i.UP):
+			_quad(wall_tool, Vector3(x0, 4.22, z0), Vector3(x1, 4.22, z0), Vector3(x1, 6.28, z0), Vector3(x0, 6.28, z0))
+		if not corridor_cells.has(cell + Vector2i.DOWN):
+			_quad(wall_tool, Vector3(x1, 4.22, z1), Vector3(x0, 4.22, z1), Vector3(x0, 6.28, z1), Vector3(x1, 6.28, z1))
+	for tool in [floor_tool, wall_tool, ceiling_tool]:
+		tool.generate_normals()
+		var mesh: ArrayMesh = tool.commit()
+		var visual := MeshInstance3D.new()
+		visual.mesh = mesh
+		add_child(visual)
+		var body := StaticBody3D.new()
+		body.name = "ConnectedTubeFloor" if tool == floor_tool else ("ConnectedTubeWalls" if tool == wall_tool else "ConnectedTubeCeiling")
+		var shape := CollisionShape3D.new()
+		shape.shape = mesh.create_trimesh_shape()
+		(shape.shape as ConcavePolygonShape3D).backface_collision = true
+		body.add_child(shape)
+		add_child(body)
+
+func _quad(tool: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	for point in [a, b, c, a, c, d]:
+		tool.add_vertex(point)
+
 func _mesh_collision(mesh: MeshInstance3D) -> void:
 	var body := StaticBody3D.new()
+	body.name = "Collision_%s" % mesh.name
 	body.transform = mesh.global_transform
 	var shape := CollisionShape3D.new()
 	shape.shape = mesh.mesh.create_trimesh_shape()
