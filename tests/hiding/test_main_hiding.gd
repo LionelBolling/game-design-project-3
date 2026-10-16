@@ -19,6 +19,7 @@ func test_f5_game_can_hide_at_a_real_dining_table() -> void:
 	assert_false(events.screen.visible, "No warning before Ronald spawns")
 	var spawned: Node3D = game.get("stalker") as Node3D
 	spawned.call("awaken")
+	game.set("fuses", 1) # the Ruleset wakes Ronald at the first fuse (D-019)
 	spawned.set_physics_process(false)
 	var trial: RandomNumberGenerator = RandomNumberGenerator.new()
 	var seed_value: int = 0
@@ -74,6 +75,9 @@ func test_f5_game_can_hide_at_a_real_dining_table() -> void:
 	stalker.call("_physics_process", 0.0)
 	assert_false(bool(stalker.get("frozen")), "He cannot be frozen while player is hidden")
 	assert_eq(game.get("phase"), "play", "Ronald cannot catch an unexposed hiding player")
+	# A few metres off, so "I see you" comes well before he arrives (Ruleset Q4).
+	stalker.global_position = Vector3(13, 0.12, -0.5)
+	director.step(0.0) # Roaming reports where he is now
 	director.step(7.0)
 	assert_true(director.board.location_leaked)
 	feedback.observe(director.board.location_leaked, true)
@@ -103,6 +107,10 @@ func test_f5_game_can_hide_at_a_real_dining_table() -> void:
 	assert_true(player.camera.current)
 	assert_eq(player.camera.transform, player_view)
 	assert_almost_eq(float(stalker.call("movement_speed", false)), 3.3, 0.001)
+	# Out of sight while the player leaves and the timer refills; with the
+	# Ruleset in charge he'd otherwise see them and start the stare.
+	stalker.global_position = Vector3(-30, 0.12, -10)
+	director.step(0.0) # Roaming reports where he is now
 	game.call("interact")
 	director.step(0.0)
 	assert_eq(director.board.hide_state, BoardTypes.Hide.EXPOSED)
@@ -125,7 +133,7 @@ func test_f5_game_can_hide_at_a_real_dining_table() -> void:
 	stalker.call("_physics_process", 0.0)
 	assert_eq(game.get("phase"), "play", "Timeout reveals the player; Ronald must approach before catching")
 	for frame: int in 100:
-		stalker.call("_physics_process", 0.1)
+		game.call("_physics_process", 0.1) # the Ruleset decides; the board walks him
 		if game.get("phase") == "caught":
 			break
 	assert_eq(game.get("phase"), "caught", "Real spawned Ronald starts his catch cutscene")
