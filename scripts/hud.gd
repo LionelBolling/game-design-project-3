@@ -61,12 +61,13 @@ func _draw() -> void:
 		_text(Vector2(55, 108), "FUSES   %d / 3" % game.fuses, 11, muted)
 		var battery := clampf(game.player.battery / 100.0, 0.0, 1.0)
 		var battery_color := Color("cd422c") if battery < 0.2 else (Color("d7a025") if battery < 0.45 else Color("2bad66"))
-		draw_rect(Rect2(1014, 35, 228, 70), Color(0.035, 0.025, 0.021, 0.82))
-		draw_line(Vector2(1014, 35), Vector2(1014, 105), gold, 3)
+		draw_rect(Rect2(1014, 35, 228, 96), Color(0.035, 0.025, 0.021, 0.82))
+		draw_line(Vector2(1014, 35), Vector2(1014, 131), gold, 3)
 		_text(Vector2(1030, 58), "FLASHLIGHT BATTERY", 11, muted)
 		for node in 5:
 			var node_color := battery_color if node < ceili(battery * 5.0) else Color("25312e")
 			draw_circle(Vector2(1040 + node * 34, 82), 9, node_color)
+		_text(Vector2(1030, 116), "R / Reload Batteries(%d/%d)" % [game.spare_cells, game.max_spare_cells], 13, gold)
 		draw_circle(Vector2(640, 360), 2.0, Color(0.85, 0.87, 0.8, 0.7))
 		if not game.prompt.is_empty():
 			var width := font.get_string_size(game.prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
