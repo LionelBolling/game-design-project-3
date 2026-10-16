@@ -85,9 +85,9 @@ Every agent reads this first and updates **only its owner's section** at the end
 
 ## Enemy Senses (Aiden)
 
-- **Status:** not started
-- **Updated:** -
-- **Done:** stub only (`systems/senses/senses_stub.gd`). The mock game and assets are on `main` as reference.
-- **Next:** interview (`systems/senses/SYSTEM.md` §5), including the smaller map
-- **Needs from others:** -
-- **Handoff notes:** -
+- **Status:** mock Acts 1.5 and 2 revisions implemented on `ball-pit`; Enemy Senses system not started
+- **Updated:** 2026-10-16 (Codex, for Aiden)
+- **Done:** stub only in `systems/senses/`. On `ball-pit`, the mock now has 28,224 staggered moving balls, shark timing and bite behavior, ball and creature sounds, and balls that fade on the same depth loops that brighten the green light. Act 1.5 hides the flashlight until F and slows swimming while it is out. Act 2 starts and restarts with a lit flashlight, hides its battery indicators, and has unlimited flashlight charge. The updated blue layout is baked into corridor cells and five route zones; walls separate zones except at the colored doors. Imported caps that blocked the revised route are hidden, while generated tube walls close the 39 marked ends. Act 2 also has the floor hatch and five lights, wall-mounted locks and cabinet, circular wall windows, hiding spots, a distant leviathan, and a centipede with delayed activation and a one-hit jumpscare. Music stops at Act 1.5 and stays off in Act 2. Godot import passed; the full GUT suite has 8 scripts and 38 passing tests; mock Act, traversal, gate, and enemy checks report zero failures.
+- **Next:** have Aiden play Acts 1.5 and 2 for horror feel, visibility, audio balance, and puzzle route clarity. Separately interview Aiden using section 5 of systems/senses/SYSTEM.md before building the smaller-map system.
+- **Needs from others:** play feedback on the mock scenes; no blackboard contract change is needed for this work.
+- **Handoff notes:** `tools/build_blue_maze_mask.py` regenerates the baked blue route and yellow endpoint data from the updated reference picture. Run it if that picture changes again, then rerun `tests/maze_traverse.gd` and `tests/maze_gate_audit.gd`. The mock work is separate from the blackboard contract and Enemy Senses system. Act 1.5 now displays the swim objective without a depth count; the rendered `reviews/act-depth.png` confirms it. Act 1 emergency fuses have a subtle green emissive material and a local green light that disappears when each fuse is collected; `reviews/act-fuse-glow.png` captures the first fuse. Act 2 hide spots now instance `Blender models/vents.glb` on tube walls: two reachable vents beyond each of the green, red, blue, and yellow doors. `reviews/act-maze-vent.png` shows the wall-mounted model; vent placement, capsule traversal, and E hide/unhide checks pass. At the user's request, the current `ball-pit` working tree was exported locally to `docs/index.html` on 2026-10-16; `docs/index.pck` is 16,106,204 bytes, under the 100,000,000-byte limit.

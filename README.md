@@ -4,18 +4,21 @@ https://rickeyjohnson.github.io/game-design-project-3/
 
 ## Ronald's
 
-A playable first-person horror game for **Godot 4.3 or newer** (tested with 4.7.2). Wake up in the ball pit of an abandoned birthday diner, pull a flashlight out of your pocket, and find a way outside.
+A playable first-person horror game for **Godot 4.3 or newer** (tested with 4.7.2). Wake up in the ball pit of an abandoned birthday diner, restore its emergency power, and follow the pit into a deeper tube maze.
 
 ### Play
 
-Import `project.godot` in Godot, let the GLB/audio assets import, then press **F5**. The home screen shows Ronald's diner front; choose **Play** to begin the ball pit opening. Space or Enter skips the opening. **Options** and **Exit game** are stacked on the right of the home screen.
+Import `project.godot` in Godot, let the GLB/audio assets import, then press **F5**. The home screen shows Ronald's diner front; choose **Play** to begin the ball pit opening. Space or Enter skips the opening. **Options** includes a **Skip to Act 1.5** button for testing the deep pit directly.
 
-The rebuilt map uses the new Blender diner: a large play place, dining booths, kitchen, cold storage, and a back hall leading to the restrooms. Environmental colors emphasize charcoal and cream, use red and gold as accents, and reserve sage green for distinctly green materials to create a grim, anxious atmosphere; pickups, controls, and the roaming clown retain their distinct colors. Runtime dust particles drift through the rooms and catch light, while reduced ambient fill leaves a few dim overhead fixtures to flicker after power is restored. Walk out through the gap in the ball pit rim. Collect three emergency fuses from a booth along the divider, a kitchen assembly table, and the cold-storage crate. Enter the kitchen through the opening to the left of the order counter, restore the breaker on its far right wall, then reach the west entrance. After the first fuse, the animated clown roams the map and chases you around obstacles when you get close. Keep it in the flashlight beam to stop it.
+The rebuilt map uses the new Blender diner: a large play place, dining booths, kitchen, cold storage, and a back hall leading to the restrooms. Charcoal and cream dominate the rooms, with red and gold accents, dust particles, and dim overhead fixtures. Walk out through the gap in the ball pit rim. Collect three emergency fuses from a booth, the kitchen, and cold storage, then restore the breaker. The ball pit remains solid until then. After power returns, follow the blinking lights back to the pit to sink into Act 1.5. After the first fuse, the animated clown roams the map and chases you around obstacles when you get close. Keep it in the flashlight beam to stop it.
+
+Act 1.5 keeps the first pit's 31 by 14.5 metre footprint and extends it 56 metres downward, or fifty player heights. Its dense, batched balls shift and settle as the player moves through them and limit visibility. Control returns after a first-person sinking sequence, and the player stays at that depth until they swim. Steer toward the green tube on the lower left. Its light starts dim and brightens whenever swimming above the top returns you to the bottom, or descending below the bottom returns you to the top. At the tube, a shark tries to bite through the opening, retreats upward, and a leviathan breaches 1.5 seconds later. A ball flies into the tube and knocks the player into Act 2. Both transitions remain in the first-person game view with no loading overlay. The player falls directly into the maze tubes and gets back on their feet before movement resumes. In Act 2, the elevated maze follows the [supplied top-down tube layout](<Reference photos/tube maze top down layout.png>). The supplied key and lever models are inside the connected network at their marked locations. Find the red, blue, yellow, and green keys, use them in the wall keyholes beside their matching doors, and pull each colored lever to light its door and central indicator. The locked gates fill the tube openings. Find the black key, open the lock in the circle room, then pull the black lever to activate the fifth circuit. All five circuits open the final door. Three sealed maze windows look into a dark abyss. Looking toward one can reveal a distant leviathan silhouette in one of six swimming passes or three quiet poses; these use a small animated shader plane and backdrop instead of water or another creature model.
 
 | Control | Action |
 |---|---|
 | WASD / Mouse | Walk / look |
 | Shift / Space | Run / jump |
+| Space / Ctrl in Act 1.5 | Swim up / swim down |
 | **F** | Toggle flashlight |
 | **R** | Replace battery using a spare cell |
 | E | Pick up / operate / open |
@@ -31,9 +34,10 @@ Four charge lights are mounted on the visible flashlight, and a five-node HUD in
 - `Blender models/ronalds.glb`: the diner shell, bathroom, freezer fittings, and play structure.
 - `Blender models/appliances.glb`: the placed booths, dining tables, chairs, prep counters, grill, fryers, drink machines, refrigerators, and ice machine. The freezer door frame fits the cold-storage entrance.
 - `Blender models/PLay place.glb`: supplies the Blender ball mesh used throughout the playable pit. The main map already includes the play structure, so the standalone room is not overlaid on it.
+- `Blender models/tube maze.glb`: the tube routes, 22 marked end caps, four colored doors and keys, levers, central circle lock, and final door. `scripts/maze_paths.json` records the model's tube section paths; the game joins their floors and walls into one traversable network while keeping the marked caps and puzzle props. Static detail becomes 90 draw groups.
 - `scripts/world.gd`: map assembly and named gameplay landmarks. The kitchen wall has a service opening; the freezer is moved out of the overlapping bathroom to the right of the kitchen. Export helper volumes and original furniture are omitted. The play-place perimeter and red enclosure use see-through glass, appliance pieces get collision and navigation clearance, the bathroom has an open entrance and stalls, and the upper play modules have supporting floors and a climbable entry. The original GLBs are preserved.
 - `Blender models/ps1-clown.glb`: the supplied rigged clown model and looping animation used by the roaming enemy.
-- `scripts/player.gd`: editable `AnimationPlayer` tracks for waking, sitting/standing, drawing the flashlight from the pocket, and switching it.
+- `scripts/player.gd`: editable `AnimationPlayer` tracks for waking, sitting/standing, drawing the flashlight from the pocket, and switching it. The two later loading screens animate a player silhouette in the HUD.
 - `audio/background soundtrack/` and `audio/nightmare_loop.wav`: the supplied looping music and quieter, looping nightmare ambience. Remaining pickup, power, and sting effects can be regenerated with `python tools/generate_audio.py` (Python standard library only).
 
 ### Furniture and appliance layout
@@ -50,13 +54,13 @@ The placements are editable in `scripts/world.gd` under `_import_appliances()`. 
 
 ### Performance
 
-The Compatibility renderer keeps the project usable without Vulkan. The diner and placed appliance kit contribute **1,558 source mesh instances**; selected geometry is combined by material and 8 m spatial cell into **201 static batches**. The **3,600 balls use one MultiMesh** with shared Blender geometry and individual colors. Nearby balls shift and settle as the player moves; none are physics bodies. Collisions use boxes fitted to furniture and triangle meshes for climbing ramps. Navigation covers the larger floor plan with clearance around obstacles. Only the flashlight casts dynamic shadows; other lights are unshadowed. Interaction checks run at 10 Hz and enemy pathfinding at 2 Hz. The camera clips at 85 m. Low graphics disables flashlight shadows and renders 3D at 75% resolution while keeping the HUD sharp.
+The Compatibility renderer keeps the project usable without Vulkan. The diner and placed appliance kit contribute **1,558 source mesh instances**; selected geometry is combined by material and 8 m spatial cell into **200 static batches**. The Act 1 balls use one MultiMesh with shared Blender geometry and individual colors. Act 1.5 has one moving MultiMesh with 11,520 balls plus 3,600 scattered balls; nearby balls shift and settle as the player passes through. The maze's 633 source meshes become 87 static detail batches plus three connected tube surfaces. Its abyss windows share one shader backdrop material and one animated silhouette. Only the active act remains loaded. Collisions use boxes fitted to furniture and triangle meshes for climbing ramps and tube interiors. Navigation covers the diner with clearance around obstacles. Only the flashlight casts dynamic shadows; other lights are unshadowed. Interaction checks run at 10 Hz and enemy pathfinding at 2 Hz. The camera clips at 85 m. Low graphics disables flashlight shadows and renders 3D at 75% resolution while keeping the HUD sharp.
 
 Use F1 while playing to inspect performance on your machine. The visual check records a frame sample, but it is not a hardware performance guarantee.
 
 ### Web export
 
-Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, and unused room audio. Keep `docs/index.pck` below 100,000,000 bytes; the current export is **11,522,740 bytes**. The packaged data includes the supplied soundtrack and nightmare ambience.
+Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, the GUT addon, and unused audio. Keep `docs/index.pck` below 100,000,000 bytes; this build is **15,701,332 bytes**. The packaged data includes the supplied soundtrack, nightmare ambience, tube maze, and key and lever models.
 
 ### Checks
 
@@ -65,10 +69,14 @@ With `godot` on PATH:
 ```powershell
 godot --headless --path . --editor --import --quit
 godot --headless --path . --fixed-fps 60 --script tests/smoke.gd
+godot --headless --path . --script tests/acts.gd
+godot --headless --path . --script tests/maze_audit.gd
+godot --headless --path . --script tests/maze_traverse.gd
+godot --headless --path . --script tests/abyss_windows.gd
 godot --path . --script tests/visual.gd
 ```
 
-The smoke test exercises the full opening, F toggle, battery drain/depletion/replacement, pause, jumping and falling, pit exit, ball movement, the upper climb and crossing, bathroom and stall entry, physical walking routes to every fuse and battery, their interactions, the kitchen breaker, the west exit, win/loss, creature freezing, pathfinding, and restart. The visual check saves home, opening, dining, beverage, service counter, ball-pit, play-place, glass walls, bathroom entrance, kitchen, freezer, restroom, and settings captures and frame samples under `reviews/`. Menu buttons use the pickup sound as their click. These generated review files are ignored by Git. The project is a short complete prototype; no save system or exported executable is included.
+The smoke test exercises the Act 1 opening, battery controls, pause, jumping, ball movement, upper play area, physical routes to pickups, the kitchen breaker, the sealed west exit, clown behavior, and restart. The act test checks both loading transitions, depth wrap, tube collision, all keys, levers, lights, doors, and final completion. The maze audit checks one connected floor, and the traverse test moves a player-sized capsule from the entrance to every puzzle location while checking locked doors and the 22 marked end caps. The abyss test checks window collision and all nine leviathan animation variants. The visual check saves Act 1 and Act 2 captures under `reviews/`. These generated review files are ignored by Git. No save system is included.
 
 ## Team
 

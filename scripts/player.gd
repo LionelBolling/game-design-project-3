@@ -4,6 +4,8 @@ signal flashlight_changed(enabled: bool)
 
 const WALK_SPEED := 2.5
 const RUN_SPEED := 4.2
+const SWIM_SPEED := 3.2
+const BATTERY_DRAIN := 0.84
 const BATTERY_DRAIN: float = 1.68
 var camera: Camera3D
 var hand: Node3D
@@ -13,6 +15,7 @@ var animation: AnimationPlayer
 var battery_lights: Array[MeshInstance3D] = []
 var battery_indicator_state := -1
 var battery := 100.0
+var flashlight_uses_battery := true
 var flashlight_on := false
 var control_enabled := false
 ## Hiding owns movement locking; mouse look and flashlight still work.
@@ -25,6 +28,10 @@ var bob_time := 0.0
 var toggle_cooldown := 0.0
 var beam_time := 0.0
 var hand_home := Vector3(0.26, -0.24, -0.42)
+var fall_speed_limit := 100.0
+var swimming := false
+var flashlight_hidden_when_off := false
+var movement_locked := false
 
 func _ready() -> void:
 	name = "Player"
@@ -145,10 +152,32 @@ func finish_intro() -> void:
 		set_flashlight(true)
 
 func set_flashlight(enabled: bool) -> void:
-	flashlight_on = enabled and battery > 0
+	flashlight_on = enabled and (not flashlight_uses_battery or battery > 0)
 	lamp.visible = flashlight_on
 	spill.visible = flashlight_on
+	if flashlight_hidden_when_off:
+		hand.visible = flashlight_on
 	flashlight_changed.emit(flashlight_on)
+
+func set_battery_system_enabled(enabled: bool) -> void:
+	flashlight_uses_battery = enabled
+	for light in battery_lights:
+		light.visible = enabled
+	if enabled:
+		update_battery_indicator()
+
+func update_flashlight_charge(delta: float) -> void:
+	if not flashlight_on:
+		return
+	if not flashlight_uses_battery:
+		lamp.light_energy = 3.8
+		return
+	battery = maxf(0.0, battery - BATTERY_DRAIN * delta)
+	update_battery_indicator()
+	if battery <= 0.0:
+		set_flashlight(false)
+	# Gentle low-battery instability, never a full-screen strobe.
+	lamp.light_energy = 3.8 if battery > 18 else 2.6 + sin(beam_time * 17) * 0.3
 
 func update_battery_indicator() -> void:
 	var lit := ceili(battery / 25.0)
@@ -170,6 +199,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		set_flashlight(not flashlight_on)
 		animation.play("switch")
 
+func swimming_speed(sprinting: bool) -> float:
+	return (RUN_SPEED if sprinting else SWIM_SPEED) * (0.5 if flashlight_on else 1.0)
 func apply_mouse_look(relative: Vector2) -> void:
 	rotate_y(-relative.x * sensitivity)
 	pitch = 0.0 if table_look_level else clampf(pitch - relative.y * sensitivity, -1.35, 1.35)
@@ -180,6 +211,8 @@ func _physics_process(delta: float) -> void:
 		return
 	toggle_cooldown = maxf(0, toggle_cooldown - delta)
 	beam_time += delta
+	update_flashlight_charge(delta)
+	if movement_locked:
 	if flashlight_on:
 		drain_battery(delta)
 		update_battery_indicator()
@@ -191,17 +224,21 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var direction := global_basis * Vector3(input.x, 0, input.y)
+	var direction := (camera.global_basis if swimming else global_basis) * Vector3(input.x, 0, input.y)
 	var speed := RUN_SPEED if Input.is_action_pressed("sprint") else WALK_SPEED
-	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 16)
-	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 16)
-	var was_on_floor := is_on_floor()
-	if not was_on_floor:
-		velocity.y -= 19.0 * delta
+	if swimming:
+		direction.y += Input.get_action_strength("jump") - Input.get_action_strength("swim_down")
+		velocity = velocity.move_toward(direction.normalized() * swimming_speed(Input.is_action_pressed("sprint")), delta * 12.0)
 	else:
-		velocity.y = -0.1
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = 5.0
+		velocity.x = move_toward(velocity.x, direction.x * speed, delta * 16)
+		velocity.z = move_toward(velocity.z, direction.z * speed, delta * 16)
+		var was_on_floor := is_on_floor()
+		if not was_on_floor:
+			velocity.y = maxf(-fall_speed_limit, velocity.y - 19.0 * delta)
+		else:
+			velocity.y = -0.1
+		if Input.is_action_just_pressed("jump") and is_on_floor():
+			velocity.y = 5.0
 	move_and_slide()
 	var moving := Vector2(velocity.x, velocity.z).length() > 0.3 and is_on_floor()
 	if moving:

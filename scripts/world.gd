@@ -38,6 +38,8 @@ var powered_fixtures: Array[MeshInstance3D] = []
 var _groups: Dictionary = {}
 var appliance_placements := 0
 var appliance_layout: Array[Dictionary] = []
+var guide_lights: Array[OmniLight3D] = []
+var guide_clock := 0.0
 
 func _ready() -> void:
 	name = "Diner"
@@ -50,10 +52,36 @@ func _ready() -> void:
 	_dust_particles()
 	_apply_environment_palette()
 	_navigation()
+	for i in 18:
+		var guide := OmniLight3D.new()
+		guide.light_color = Color("86dc91")
+		guide.light_energy = 0
+		guide.omni_range = 3.0
+		guide.shadow_enabled = false
+		add_child(guide)
+		guide_lights.append(guide)
 
 func _process(delta: float) -> void:
 	_animate_balls(delta)
 	_animate_overhead_lights(delta)
+	if not guide_lights.is_empty() and get_parent().get("power_on"):
+		guide_clock -= delta
+		if guide_clock <= 0:
+			guide_clock = 0.4
+			_update_guides()
+		for i in guide_lights.size():
+			guide_lights[i].light_energy = 1.6 if fmod(Time.get_ticks_msec() * 0.001 - i * 0.16, 1.25) < 0.62 else 0.06
+
+func _update_guides() -> void:
+	var player := get_parent().get("player") as CharacterBody3D
+	if player == null:
+		return
+	var route_points := route(player.global_position, Vector3(0, 0, -11))
+	if route_points.is_empty():
+		return
+	for i in guide_lights.size():
+		var index := mini(route_points.size() - 1, roundi(float(i + 1) / guide_lights.size() * (route_points.size() - 1)))
+		guide_lights[i].position = Vector3(route_points[index].x, 0.8, route_points[index].y)
 
 func _import_diner() -> void:
 	var imported := DINER.instantiate()
