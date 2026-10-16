@@ -22,6 +22,7 @@ var bob_time := 0.0
 var toggle_cooldown := 0.0
 var beam_time := 0.0
 var hand_home := Vector3(0.26, -0.24, -0.42)
+var fall_speed_limit := 100.0
 
 func _ready() -> void:
 	name = "Player"
@@ -188,7 +189,7 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 16)
 	var was_on_floor := is_on_floor()
 	if not was_on_floor:
-		velocity.y -= 19.0 * delta
+		velocity.y = maxf(-fall_speed_limit, velocity.y - 19.0 * delta)
 	else:
 		velocity.y = -0.1
 	if Input.is_action_just_pressed("jump") and is_on_floor():

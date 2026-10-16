@@ -53,12 +53,20 @@ func _draw() -> void:
 		if game.intro_time > 1.4 and game.intro_time < 6.3:
 			_text(Vector2(54, 80), "R O N A L D ' S", 44, ink, title_font)
 			_text(Vector2(57, 112), "T H E   L A S T   B I R T H D A Y", 12, gold)
-	elif game.phase == "play":
+	elif game.phase in ["play", "depth", "maze"]:
 		draw_rect(Rect2(38, 35, 390, 84), Color(0.035, 0.025, 0.021, 0.82))
 		draw_line(Vector2(38, 35), Vector2(38, 119), gold, 3)
 		_text(Vector2(55, 59), "R O N A L D ' S", 12, gold)
 		_text(Vector2(55, 87), game.objective, 17)
-		_text(Vector2(55, 108), "FUSES   %d / 3" % game.fuses, 11, muted)
+		if game.phase == "play":
+			_text(Vector2(55, 108), "FUSES   %d / 3" % game.fuses, 11, muted)
+		elif game.phase == "depth":
+			_text(Vector2(55, 108), "DEPTH   %d / 50" % mini(50, roundi(-game.player.position.y / 1.12)), 11, muted)
+		else:
+			var circuits := 0
+			for active in game.world.levers.values():
+				circuits += int(active)
+			_text(Vector2(55, 108), "CIRCUITS   %d / 5" % circuits, 11, muted)
 		var battery := clampf(game.player.battery / 100.0, 0.0, 1.0)
 		var battery_color := Color("cd422c") if battery < 0.2 else (Color("d7a025") if battery < 0.45 else Color("2bad66"))
 		draw_rect(Rect2(1014, 35, 228, 70), Color(0.035, 0.025, 0.021, 0.82))
@@ -72,22 +80,46 @@ func _draw() -> void:
 			var width := font.get_string_size(game.prompt, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x
 			draw_rect(Rect2(616 - width / 2, 414, width + 48, 40), Color(0.02, 0.03, 0.03, 0.86))
 			_text(Vector2(640 - width / 2, 440), game.prompt, 16)
-		if game.stalker.active and game.stalker.frozen:
+		if game.phase == "play" and game.stalker.active and game.stalker.frozen:
 			_text(Vector2(546, 391), "KEEP HIM IN THE LIGHT", 12, gold)
+	elif game.phase == "loading":
+		_draw_loading()
 	if game.phase in ["won", "dead"]:
 		draw_rect(Rect2(0, 0, 1280, 720), Color(0.015, 0.023, 0.027, 0.94))
 		_text(Vector2(95, 196), "R O N A L D ' S   /   T H E   L A S T   B I R T H D A Y", 13, gold)
-		_text(Vector2(90, 308), "You made it outside." if game.phase == "won" else "The party never ends.", 53, ink, title_font)
-		_text(Vector2(96, 359), "Behind you, a birthday song begins again." if game.phase == "won" else "Keep the beam on him. Run when you need to look away.", 20, muted)
+		_text(Vector2(90, 308), "You escaped the tube maze." if game.phase == "won" else "The party never ends.", 53, ink, title_font)
+		_text(Vector2(96, 359), "All five lights are on. The way ahead is open." if game.phase == "won" else "Keep the beam on him. Run when you need to look away.", 20, muted)
 		_text(Vector2(96, 448), "TIME  %02d:%02d     /     FUSES  %d / 3" % [int(game.elapsed) / 60, int(game.elapsed) % 60, game.fuses], 14, gold)
 		_text(Vector2(96, 533), "ENTER  Play again       ESC  Quit", 17, ink)
 	if menu_mode == "pause" or menu_mode == "options_pause":
 		draw_rect(Rect2(0, 0, 1280, 720), Color(0.08, 0.025, 0.02, 0.53))
-	if game.show_performance and game.phase == "play" and menu_mode.is_empty():
+	if game.show_performance and game.phase in ["play", "depth", "maze"] and menu_mode.is_empty():
 		draw_rect(Rect2(38, 132, 400, 90), Color(0, 0, 0, 0.85))
 		_text(Vector2(51, 155), "%d FPS  /  %.1f ms  /  %s" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000, "LOW" if game.low_quality else "STANDARD"], 14)
 		_text(Vector2(51, 180), "Draw calls: %d   |   Objects: %d" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)], 13, muted)
 		_text(Vector2(51, 205), "F3  Toggle shadows / render scale", 13, gold)
+
+func _draw_loading() -> void:
+	draw_rect(Rect2(0, 0, 1280, 720), Color("071016"))
+	var progress := clampf(game.loading_time / 2.6, 0.0, 1.0)
+	var sinking: bool = game.loading_to == "depth"
+	var center := Vector2(640, lerpf(260, 750, progress) if sinking else lerpf(180, 550, progress))
+	for row in 6:
+		for column in 15:
+			var offset := sin(float(row * 13 + column * 7) + game.loading_time * 2.5) * 7.0
+			var at := Vector2(200 + column * 63, 470 + row * 38 + offset)
+			var colors := [Color("a53a39"), Color("bc9c38"), Color("3d679b")]
+			draw_circle(at, 28, colors[(row + column) % 3])
+	draw_circle(center + Vector2(0, -38), 19, Color("ad896e"))
+	draw_rect(Rect2(center + Vector2(-24, -19), Vector2(48, 67)), Color("475657"))
+	draw_line(center + Vector2(-18, 0), center + Vector2(-48, 34), Color("ad896e"), 11)
+	draw_line(center + Vector2(18, 0), center + Vector2(43, 41), Color("ad896e"), 11)
+	if not sinking:
+		draw_circle(Vector2(640, 475), 102, Color(0.23, 0.7, 0.36, 0.27))
+	_text(Vector2(74, 106), "THE PIT KEEPS GOING" if sinking else "INTO THE TUBES", 39, ink, title_font)
+	_text(Vector2(76, 146), "SINKING INTO ACT 1.5" if sinking else "FALLING INTO ACT 2", 15, gold)
+	draw_rect(Rect2(76, 639, 1128, 8), Color("263b40"))
+	draw_rect(Rect2(76, 639, 1128 * progress, 8), gold)
 
 func _process(delta: float) -> void:
 	draw_clock += delta
@@ -218,6 +250,7 @@ func _options_menu() -> void:
 		game.set_quality(enabled)
 	)
 	column.add_child(quality_button)
+	_button(column, "SKIP TO ACT 1.5", func(): game.skip_to_depth())
 	_button(column, "BACK", func(): show_menu("home" if menu_mode == "options_home" else "pause"))
 
 func show_menu(next_mode: String) -> void:

@@ -220,22 +220,24 @@ func run() -> void:
 	check(await walk_to(Vector3(-34, 0.12, 0)), "Player walks back to the west exit")
 	aim_at(game.items[6].node.global_position)
 	await key(KEY_E)
-	check(game.phase == "won", "Powered exit completes game")
+	check(game.phase == "play" and game.objective.contains("ball pit"), "Powered exit stays sealed and points to ball pit")
 	game.phase = "play"
 	game.player.control_enabled = true
 	game.player.position = Vector3(0, 0.12, -2)
 	game.player.rotation = Vector3.ZERO
 	game.player.camera.rotation = Vector3.ZERO
 	game.player.pitch = 0
-	game.stalker.position = Vector3(0, 0.12, -4)
+	game.stalker.position = Vector3(0, 0.12, -3.2)
 	game.stalker.active = true
-	game.stalker.grace = 0
+	game.stalker.grace = 1.0
+	game.player.battery = 100
 	game.player.set_flashlight(true)
 	await frames(4)
 	check(game.stalker.frozen, "Flashlight freezes visible stalker")
 	game.player.set_flashlight(false)
 	await frames(4)
 	check(not game.stalker.frozen, "Stalker resumes when light switches off")
+	game.stalker.grace = 0
 	game.stalker.position = game.player.position + Vector3(0, 0, -0.5)
 	await frames(4)
 	check(game.phase == "dead", "Stalker contact triggers failure")

@@ -53,8 +53,8 @@ Every agent reads this first and updates **only its owner's section** at the end
 ## Enemy Senses (Aiden)
 
 - **Status:** not started
-- **Updated:** -
+- **Updated:** 2026-10-16 (Codex, for Aiden)
 - **Done:** stub only (`systems/senses/senses_stub.gd`). The mock game and assets are on `main` as reference.
 - **Next:** interview (`systems/senses/SYSTEM.md` §5), including the smaller map
 - **Needs from others:** -
-- **Handoff notes:** -
+- **Handoff notes:** The `ball-pit` branch adds an Act 1.5 deep pit and Act 2 tube maze to Aiden's mock (`scripts/`, `tests/`, and the supplied maze GLB). It does not change the blackboard contract or the Enemy Senses stub. The mock has an Options shortcut for direct Act 1.5 testing; this is separate from the planned smaller-map system.
