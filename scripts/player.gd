@@ -5,7 +5,6 @@ signal flashlight_changed(enabled: bool)
 const WALK_SPEED := 2.5
 const RUN_SPEED := 4.2
 const SWIM_SPEED := 3.2
-const BATTERY_DRAIN := 0.84
 const BATTERY_DRAIN: float = 1.68
 var camera: Camera3D
 var hand: Node3D
@@ -212,15 +211,7 @@ func _physics_process(delta: float) -> void:
 	toggle_cooldown = maxf(0, toggle_cooldown - delta)
 	beam_time += delta
 	update_flashlight_charge(delta)
-	if movement_locked:
-	if flashlight_on:
-		drain_battery(delta)
-		update_battery_indicator()
-		if battery <= 0:
-			set_flashlight(false)
-		# Gentle low-battery instability, never a full-screen strobe.
-		lamp.light_energy = 3.8 if battery > 18 else 2.6 + sin(beam_time * 17) * 0.3
-	if hiding_locked:
+	if movement_locked or hiding_locked:
 		velocity = Vector3.ZERO
 		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
