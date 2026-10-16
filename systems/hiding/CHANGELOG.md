@@ -2,6 +2,8 @@
 
 Updated 2026-10-15. This records the final behavior of the complete local change since `c04d496` and the requested revisions that led to it. Exact tuning and interview answers are in [SYSTEM.md](SYSTEM.md); implementation and validation history is in [PLAN.md](PLAN.md). Audio sources and regeneration are in [AUDIO.md](AUDIO.md).
 
+Review: [PR #5](https://github.com/rickeyjohnson/game-design-project-3/pull/5), from `LionelBolling:hiding/01-hide-timer` into the team's `main`. Gameplay commit: `f11e916`. Author identity supplied by Lionel. PR creation was explicitly requested; the PR is open, not merged, and no web export was generated.
+
 ## Hiding and table coverage
 
 - Added reusable `HideTimer`, `HideSpot`, `HidingSystem`, spot scene and hiding HUD, plus a local integration scene built against the published teammate stubs.
