@@ -52,6 +52,13 @@ Everyone was working their own way, so the process rules are gone: no folder own
 - [ ] Naomi (Roaming)
 - [ ] Aiden (Senses)
 
+**P-002 · 2026-10-14 · Rickey · Contract v0.2: what the Ruleset interview needs**
+From `systems/ruleset/SYSTEM.md` §6. **Adopted 2026-10-16** with no sign-offs (D-024).
+- **`BoardTypes.Mode` gains five modes (eight in all):** `DORMANT` (not active yet; Roaming keeps his body hidden and still), `POSE` (frozen on a bench like a statue), `SEEK` (walking to the player's leaked hiding spot after "I see you"), `CAMP` (waiting at the ball-pit rim) and `CATCH` (the stare, then the sprint). In `DORMANT` and `POSE`, Roaming ignores `target_position` (as in `PATROL`); in `POSE`, `at_target` is true once he's seated.
+- **New Hiding values:** `fuses_collected: int` (0–3) and `breaker_on: bool`, written by Hiding because the player does the picking up. Read by the Ruleset (wake Ronald at the first fuse; escaping needs the breaker) and by display code (HUD, lights).
+- **New Roaming value:** `target_unreachable: bool`, true when Ronald can't reach `target_position` and went to the nearest reachable point instead (the ball pit). Read by the Ruleset (switch to CAMP).
+- **A rule, not a value:** Hiding locks the player's controls while `ronald_mode == CATCH`.
+
 ## Open questions
 
 The team-level ones are in `docs/GAME_SPEC.md` §9 (Q1–Q7). The ones for each system are in that system's `SYSTEM.md` §5.
@@ -73,3 +80,18 @@ Lionel requested the hidden flashlight not affect Ronald, continued checking of 
 
 **D-018 - 2026-10-15 - Lionel - Final hiding/scare revisions and PR handoff**
 Lionel's later requests supersede the timing/animation/voice details of D-013 through D-017: original imported animation and original I see you audio; six-second continuous exposed beam before pounce; 50% warning chance per thirteen eligible seconds after spawn; 35% figure chance per eligible turnaround with three-second cooldown. The figure matches the player's height, lunges toward the live camera and disappears without control takeover, and plays Ronald's current jumpscare scream on spawn. After the timeout line finishes, show 0.5 s of Ronald running, then restore player view/control while he continues to the captured reachable spotted area. Grapple win restores a charged flashlight and usable toggling. The existing battery GUI includes live R / Reload Batteries(amount/maxamount), with maximum derived from the four obtainable spare cells. All seven standalone and five booth tables now support hiding, with three additional prep-counter covers, clear per-furniture cameras and nearby E / HIDE markers; ball-pit hiding remains disabled. These are authorized legacy F5 changes, not new blackboard values or teammate-system implementations. Full feature/revision/impact record is systems/hiding/CHANGELOG.md. Lionel explicitly requested documenting all changes and creating a PR into main; merging and web export are separate work.
+
+**D-019 · 2026-10-14 · Rickey (Ruleset interview) · Escape: 3 fuses, the breaker, then the exit**
+The player collects 3 fuses, restores the breaker, then leaves through the exit, as in the demo. This deliberately goes against the GDD's inventory cut (decisions outrank the GDD, D-006): the only "inventory" is a fuse count, with no storage or crafting. Ronald stays dormant until the first fuse is picked up. Answers GAME_SPEC Q1. *Affects:* Lionel (fuse and breaker interactions), Aiden (placing the fuses, breaker and exit; lights come on with the breaker), Naomi (Ronald's hidden, dormant body).
+
+**D-020 · 2026-10-14 · Rickey (Ruleset interview) · Ronald is the only monster**
+One monster in v1. His numbers live in a data resource, so a second mascot later is new data, not new code. The board stays single-enemy. Answers GAME_SPEC Q2. *Affects:* everyone.
+
+**D-021 · 2026-10-14 · Rickey (Ruleset interview) · The flashlight never freezes Ronald**
+The demo's freeze-in-the-beam rule is dropped. Whether the flashlight exists is still team question Q4 (Lionel and Aiden); if it stays, it's only light and makes the player easier to spot. *Affects:* Lionel, Aiden.
+
+**D-022 · 2026-10-14 · Rickey (Ruleset interview) · Opening and ending**
+Keep the demo's opening (waking up in the ball pit). When the player escapes, a short non-interactive reveal: the lights come on and a real man in a cheap clown suit stands where Ronald was. Needs a second character model; who makes it is open. Answers GAME_SPEC Q7. *Affects:* Naomi and Aiden (the model), Rickey (game flow).
+
+**D-023 · 2026-10-16 · Rickey · The F5 game runs the Ruleset**
+Ronald in the F5 game and the web build now does what the Ruleset says. `scripts/game.gd`'s Director holds `LegacyHiding` (Lionel's `HidingSystem` plus the game's fuses, breaker and exit), `LegacySenses` and `LegacyRoaming` (stand-ins built on the mock), and the real `RulesetSystem`; the run ends on the board's `game_state`. The mock Ronald's own brain stays in `stalker.gd` but is off while `driven`, so the flashlight freeze and the 6 s beam pounce from D-013 to D-018 no longer happen (D-021). Lionel's cutscenes, voice, chase music and catch leap stay as presentation. *Affects:* everyone; Lionel reviews the updated `tests/hiding/test_main_hiding.gd`; Aiden and Naomi replace the stand-ins with their systems; the smoke test's checks for the old brain are updated to the rules.

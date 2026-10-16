@@ -37,23 +37,23 @@ Exact size: Aiden decides. The proposal is about 24 × 18 m (Closing Time's 30 �
 - **First person, child-sized.** "Everything will appear larger than the character due to being the size of a child" (GDD). The camera height is Lionel's call (Closing Time proposes 1.0 m standing).
 - **Survives by hiding and escaping only.** No weapons, no fighting (GDD cut: combat). No item storage, collecting materials or crafting (GDD cut: inventory and crafting).
 - **Hiding (GDD scope):** the game tracks whether the player is hidden, which spot they're in and how long they've stayed. Hide past the limit and the spot is leaked to Ronald.
-- The mock's flashlight, battery and fuses aren't in the GDD, and the fuses conflict with the inventory cut. See Q4.
+- **Fuses are in** (D-019), even though the GDD cut inventory: the only "inventory" is a count of 3 fuses. The demo's flashlight and battery are still open (Q4); the flashlight never freezes Ronald (D-021).
 
 ## 4. Ronald
 
 - **Look (D-007):** a low-poly, PS1-style horror clown inspired by Ronald McDonald: yellow jumpsuit, red-and-white striped sleeves, white collar, red hair, white face paint and a red smile. Details are in [`ART.md`](ART.md).
-- **One monster in v1** (Closing Time cut: no extra roaming mascots). The GDD says "each mascot's" but also "the central monster". See Q2.
-- **Rules from the pitch notes** (Rickey confirms them in his interview):
+- **One monster in v1** (D-020).
+- **His rules are decided:** see `systems/ruleset/SYSTEM.md` §6 for the full list (eight modes, numbers and timings). They grew from the pitch notes:
   1. He won't go into the ball pit.
   2. If you hide too long, he finds you, and says "I see you" before he comes.
   3. A sound cue plays when he sees you inside his sensing range while you're uncovered.
   4. Getting caught is a pre-death stare, then a jumpscare as he runs at you.
-- The Closing Time draft turns these into numbers (20 s hide limit, 7 m sight, 3 m catch range, and so on). Those are each owner's recommended starting answers.
+- The Closing Time draft turns these into numbers (20 s hide limit, 7 m sight, 3 m catch range, and so on). Those are each owner's recommended starting answers; Rickey's are now decided.
 
 ## 5. Winning and losing
 
-- **Lose:** Ronald catches you (`game_state = CAUGHT`). The run restarts.
-- **Win:** you escape (`game_state = ESCAPED`). **How you escape is open (Q1).** The board has a placeholder, `player_at_exit`.
+- **Lose:** Ronald catches you: a 2 s stare, then a sprint and a cut to black (`game_state = CAUGHT`). The run restarts.
+- **Win (D-019):** collect 3 fuses, restore the breaker, then leave through the exit (`game_state = ESCAPED`). Ronald stays dormant until the first fuse. Escaping plays the intruder reveal (D-022).
 
 ## 6. The four systems
 
@@ -88,10 +88,10 @@ Each owner's own questions are in their `SYSTEM.md`. These cross systems:
 
 | # | Question | Options (recommended first) | Decides |
 |---|---|---|---|
-| Q1 | How does the player escape? | A. Find your shoes, then push the emergency exit (Closing Time). B. Just reach the exit. C. The mock's fuses and breaker (conflicts with the inventory cut). | Rickey, with the team |
-| Q2 | One monster or several? | A. Ronald only in v1. B. Ronald plus mascot statues that only look scary. | Rickey |
+| Q1 | How does the player escape? | **Decided (D-019):** the demo's 3 fuses, the breaker, then the exit. | Rickey |
+| Q2 | One monster or several? | **Decided (D-020):** Ronald only. | Rickey |
 | Q3 | Game title? | The GDD says "McRonald's"; the mock says "Ronald's". | Team |
 | Q4 | Keep the mock's flashlight? | A. Cut it: the GDD's light comes from the room. B. Keep it, but it makes you easier to see. C. Keep it as in the mock. | Lionel and Aiden |
 | Q5 | Whole-game PS1 look (low resolution, pixelation) like the Ronald reference? | A. Yes, a light pixelation pass (Project 2 had one). B. Only Ronald is low-poly. | Naomi and Lionel (edge and detail, camera) |
 | Q6 | Does Ronald carry the cleaver from the reference image? | A. Yes, visual only. B. No. | Naomi, with the team |
-| Q7 | Opening and ending (Closing Time: wake up in the pit; the ending reveals a real intruder)? | A. In, as short non-interactive scenes. B. Later. | Team |
+| Q7 | Opening and ending? | **Decided (D-022):** the demo's ball-pit opening, and a full intruder reveal when you escape. | Rickey |

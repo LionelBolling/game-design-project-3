@@ -16,6 +16,9 @@ var fuses := 0
 var spare_cells := 2
 var max_spare_cells: int = 2
 var power_on := false
+## The player opened the powered front door. Hiding writes it to the board
+## (player_at_exit) and the Ruleset ends the run.
+var at_exit := false
 var objective := "Find the three emergency fuses"
 var prompt := ""
 var message := ""
@@ -32,6 +35,7 @@ var ambient: AudioStreamPlayer
 var nightmare_ambient: AudioStreamPlayer
 var hiding: HidingSystem
 var hiding_director: Director
+var ruleset: RulesetSystem
 var _hiding_audio_bus: int = -1
 var horror_feedback: HorrorFeedback
 var horror_events: HorrorEvents
@@ -93,18 +97,32 @@ func _setup_hiding() -> void:
 	hiding_director = Director.new()
 	hiding_director.name = "HidingDirector"
 	hiding_director.process_mode = Node.PROCESS_MODE_PAUSABLE
-	hiding = HidingSystem.new()
+	var legacy_hiding := LegacyHiding.new()
+	legacy_hiding.game = self
+	hiding = legacy_hiding
 	hiding.external_body = true
 	hiding.keyboard = false
 	hiding.body = player
 	hiding.camera = player.get("camera") as Camera3D
 	hiding_director.add_child(hiding)
-	# Legacy AI remains in charge; these slots do not simulate duplicate enemies.
-	for id: StringName in [&"senses", &"ruleset", &"roaming"]:
-		var slot: SimSystem = SimSystem.new()
-		slot.system_id = id
-		hiding_director.add_child(slot)
+	# The Ruleset (Rickey) decides what Ronald does. Senses and Roaming are
+	# stand-ins built on this mock (scripts/legacy_*.gd) until Aiden's and
+	# Naomi's systems replace them.
+	var senses := LegacySenses.new()
+	senses.stalker = stalker
+	hiding_director.add_child(senses)
+	ruleset = RulesetSystem.new()
+	ruleset.end_screens = false # this game draws its own
+	hiding_director.add_child(ruleset)
+	var roaming := LegacyRoaming.new()
+	roaming.stalker = stalker
+	roaming.world = world
+	hiding_director.add_child(roaming)
 	add_child(hiding_director)
+	# Lionel's timeout cutscene voices "I see you" and the catch cutscene
+	# screams, so the rules' placeholder whisper and scream stay silent here.
+	ruleset.cue_player.sounds[&"whisper"] = null
+	ruleset.cue_player.sounds[&"scream"] = null
 	hiding_director.set_physics_process(false)
 	hiding.hud.message.position = Vector2(40, 570)
 	hiding.hud.bar.position = Vector2(40, 606)
@@ -157,7 +175,16 @@ func _physics_process(delta: float) -> void:
 		(node as HideSpot).markers_enabled = phase == "play" and not get_tree().paused and not timeout_scene.camera_locked and not player.hiding_locked
 	if phase == "play" and not get_tree().paused:
 		hiding_director.step(delta)
-		timeout_scene.tick(hiding_director.board.location_leaked, delta)
+		var board: Blackboard = hiding_director.board
+		match board.game_state:
+			BoardTypes.Game.CAUGHT:
+				finish(false)
+				return
+			BoardTypes.Game.ESCAPED:
+				finish(true)
+				return
+		# Asleep, Ronald can't come for a leaked spot, so no cutaway either.
+		timeout_scene.tick(board.location_leaked and board.ronald_mode != BoardTypes.Mode.DORMANT, delta)
 		var spot: HideSpot = hiding._spot
 		AudioServer.set_bus_effect_enabled(_hiding_audio_bus, 0, spot != null and spot.spot_type == HideSpot.Kind.BALL_PIT)
 
@@ -365,10 +392,9 @@ func interact() -> void:
 			item.node.hide()
 			fuses += 1
 			sound("pickup")
-			if fuses == 1:
-				stalker.awaken()
+			if fuses == 1: # the Ruleset wakes Ronald now
 				sound("sting")
-				say("Something moved. Keep your flashlight on it.", 6)
+				say("Something moved.", 6)
 			elif fuses == 3:
 				objective = "Restore power in the kitchen"
 				say("All three. The breaker is on the far kitchen wall.", 6)
@@ -389,13 +415,12 @@ func interact() -> void:
 				breaker_lamp.material_override = Geo.material(Color("72b58d"), 0, 2)
 				world.exit_light.light_energy = 2.4
 				world.set_powered(true)
-				stalker.speed = 2.1
 				objective = "Reach the west entrance"
 				sound("power")
-				say("The door has power. He's moving faster. Go.", 5)
+				say("The door has power. Go.", 5)
 		"exit":
 			if power_on:
-				finish(true)
+				at_exit = true # the Ruleset ends the run next frame
 			else:
 				say("The magnetic lock has no power. Find the emergency fuses.")
 	_find_interaction()

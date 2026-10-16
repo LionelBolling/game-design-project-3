@@ -11,6 +11,9 @@ var investigating: bool = false
 var investigation_target: Vector3 = Vector3.ZERO
 var _investigation_left: float = 0.0
 var active := false
+## True while the board drives him (LegacyRoaming walks him where the Ruleset
+## says). His own brain in _physics_process then stays off.
+var driven: bool = false
 var player: CharacterBody3D
 var world: Node3D
 var clown: Node3D
@@ -85,6 +88,8 @@ func awaken() -> void:
 	path_timer = 0.0
 
 func _physics_process(delta: float) -> void:
+	if driven:
+		return
 	if not active or (not player.control_enabled and not cinematic_sprinting):
 		chasing = false
 		update_locomotion(0.0, delta)
