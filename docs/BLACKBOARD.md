@@ -24,7 +24,7 @@ These are the only values that pass between systems. Four people and their agent
 | `hide_spot` | `StringName` | Id of the spot the player is in; `&""` when exposed | `&""` | `&"stub_spot"` while hidden | Ruleset, Senses |
 | `hide_time` | `float` s | Time in the current spot; 0 when exposed | `0` | Counts while hidden | Ruleset |
 | `location_leaked` | `bool` | The player hid past the limit and their spot is given away (GDD scope) | `false` | True after 10 s hidden | Ruleset, Senses |
-| `player_at_exit` | `bool` | The player is in the exit zone. Escaping needs this **and** `breaker_on` (D-013). | `false` | True while X is held | Ruleset |
+| `player_at_exit` | `bool` | The player is in the exit zone. Escaping needs this **and** `breaker_on` (D-019). | `false` | True while X is held | Ruleset |
 | `fuses_collected` | `int` 0–3 | How many fuses the player has picked up (v0.2) | `0` | F adds one, up to 3 | Ruleset, display |
 | `breaker_on` | `bool` | The player restored the breaker; needs all 3 fuses (v0.2) | `false` | B, once 3 fuses are in | Ruleset, display (lights) |
 

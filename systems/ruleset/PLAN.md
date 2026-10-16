@@ -2,7 +2,7 @@
 
 Owner: Rickey · Approved: 2026-10-14 (Rickey: build it in this session, on one branch)
 
-> **Agents:** build one step at a time (`AGENTS.md` Rule 4). Each step gets its own branch from an up-to-date `main` (named in the step), its own PR, and a stop-and-report at the end. The design behind every step is `systems/ruleset/SYSTEM.md` §6; the team-wide parts are `docs/DECISIONS.md` D-013 to D-016 and P-002.
+> **Agents:** build one step at a time (`AGENTS.md` Rule 4). Each step gets its own branch from an up-to-date `main` (named in the step), its own PR, and a stop-and-report at the end. The design behind every step is `systems/ruleset/SYSTEM.md` §6; the team-wide parts are `docs/DECISIONS.md` D-019 to D-022 and P-002.
 
 ## Goal
 
@@ -11,7 +11,7 @@ Ronald behaves exactly as Rickey's interview describes: dormant until the first 
 ## How it's built
 
 - **`RonaldRules`** (`ronald_rules.gd`, a `RefCounted`): Ronald's brain as plain logic. Each frame it reads the board and decides `mode`, `target`, `speed`, `game_state`, and any one-off `cues` (`&"honk"`, `&"whisper"`, `&"scream"`). No nodes, so tests need no scene.
-- **`RonaldTuning`** (`ronald_tuning.gd` + `ronald_tuning.tres`, a `Resource`): every number from the interview, editable in the Inspector (Godot's property panel). A second mascot later is a second `.tres` (D-014).
+- **`RonaldTuning`** (`ronald_tuning.gd` + `ronald_tuning.tres`, a `Resource`): every number from the interview, editable in the Inspector (Godot's property panel). A second mascot later is a second `.tres` (D-020).
 - **`RulesetSystem`** (`ruleset_system.gd`, a `SimSystem` with id `ruleset`): calls `RonaldRules.step()` and copies the results onto the board. Later it owns two display children: `CuePlayer` (sounds) and `GameFlow` (lose and win screens).
 - **Borrowed from the demo** (`scripts/`, reference only, never edited): the run phases and `finish()` / `restart()` in `game.gd`, the HUD panels in `hud.gd`, and the catch flow in `stalker.gd`.
 
@@ -428,7 +428,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
 
   ```gdscript
   extends GutTest
-  ## Dormant until the first fuse (D-013).
+  ## Dormant until the first fuse (D-019).
 
   var board: Blackboard
   var rules: RonaldRules
@@ -761,7 +761,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
 
   ```gdscript
   extends GutTest
-  ## Escaping: 3 fuses, the breaker, then the exit (D-013).
+  ## Escaping: 3 fuses, the breaker, then the exit (D-019).
 
   var board: Blackboard
   var rules: RonaldRules
@@ -829,7 +829,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
       Test: `tests/ruleset/test_game_flow.gd`
       Done when: CAUGHT cuts to black with "Caught. Press R."; ESCAPED shows the reveal (a placeholder figure where Ronald stood, lights up) then "You escaped. Press R."; R restarts. Borrow the panels and the restart from the demo's `hud.gd` and `game.gd`.
 
-  `GameFlow` (`game_flow.gd`, extends `Node`) is a child of `RulesetSystem`, with its own `CanvasLayer` for the screens and a `Node3D` for the reveal. It's display code: it finds the board with `get_tree().get_first_node_in_group(Director.GROUP)` and only reads it. A static `screen_for(game_state) -> StringName` returns `&""`, `&"caught"` or `&"escaped"`; `place_reveal(at: Vector3) -> Node3D` puts the reveal figure at the board's `enemy_position` and uses a placeholder until the intruder model exists (D-016).
+  `GameFlow` (`game_flow.gd`, extends `Node`) is a child of `RulesetSystem`, with its own `CanvasLayer` for the screens and a `Node3D` for the reveal. It's display code: it finds the board with `get_tree().get_first_node_in_group(Director.GROUP)` and only reads it. A static `screen_for(game_state) -> StringName` returns `&""`, `&"caught"` or `&"escaped"`; `place_reveal(at: Vector3) -> Node3D` puts the reveal figure at the board's `enemy_position` and uses a placeholder until the intruder model exists (D-022).
 
   ```gdscript
   extends GutTest
@@ -869,14 +869,14 @@ The ways this is most likely to break for a player, each pinned by a test in the
 ## Needs from others
 
 - **Lionel, Naomi, Aiden:** sign P-002 in `docs/DECISIONS.md` before step 3.
-- **Lionel:** the kid's run speed (sets `chase_speed`, step 1); the ball pit's hiding-spot id (`ball_pit`, step 7); lock controls while `ronald_mode == CATCH`; write `fuses_collected` and `breaker_on`; the demo's ball-pit wake-up opening (D-016) is the player's, so it's his to port (Ronald is dormant during it anyway).
+- **Lionel:** the kid's run speed (sets `chase_speed`, step 1); the ball pit's hiding-spot id (`ball_pit`, step 7); lock controls while `ronald_mode == CATCH`; write `fuses_collected` and `breaker_on`; the demo's ball-pit wake-up opening (D-022) is the player's, so it's his to port (Ronald is dormant during it anyway).
 - **Naomi:** `target_unreachable` (step 7); DORMANT hides his body; POSE picks a bench and seats him (`at_target` when seated); CATCH faces the player at speed 0, then sprints; the CATCH sprint at 8 m/s.
 - **Aiden:** the "seen" honk is the Ruleset's (his Senses Q6); bench pose spots, fuses, breaker and exit in the level; the lights come on when `breaker_on` is true.
-- **Team:** real honk, whisper and scream sounds (step 10 uses `sting.wav` until then); who makes the intruder model (step 11, D-016).
+- **Team:** real honk, whisper and scream sounds (step 10 uses `sting.wav` until then); who makes the intruder model (step 11, D-022).
 
 ## Ideas (not in this plan)
 
 - A 4 s grace after waking, like the demo's clown.
 - Posing next to a real decoy statue (needs Aiden's art).
-- A second mascot as a second `RonaldTuning` (D-014).
+- A second mascot as a second `RonaldTuning` (D-020).
 - A "the exit is locked" hint when you reach the exit without power.

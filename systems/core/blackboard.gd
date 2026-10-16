@@ -87,7 +87,7 @@ var player_at_exit := false:
 		if _may_write(&"player_at_exit"):
 			player_at_exit = value
 
-## How many fuses the player has picked up, 0 to 3 (D-013).
+## How many fuses the player has picked up, 0 to 3 (D-019).
 var fuses_collected := 0:
 	set(value):
 		if _may_write(&"fuses_collected"):

@@ -1,5 +1,5 @@
 extends GutTest
-## Escaping: 3 fuses, the breaker, then the exit (D-013).
+## Escaping: 3 fuses, the breaker, then the exit (D-019).
 
 var board: Blackboard
 var rules: RonaldRules

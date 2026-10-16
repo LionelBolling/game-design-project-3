@@ -36,7 +36,7 @@ func step(board: Blackboard, delta: float) -> void:
 	cues.clear()
 	if game_state != BoardTypes.Game.PLAYING:
 		return
-	if board.player_at_exit and board.breaker_on: # escaping beats everything (D-013)
+	if board.player_at_exit and board.breaker_on: # escaping beats everything (D-019)
 		game_state = BoardTypes.Game.ESCAPED
 		return
 	if mode == BoardTypes.Mode.DORMANT:
@@ -54,7 +54,7 @@ func step(board: Blackboard, delta: float) -> void:
 	_hunt(board, delta)
 
 
-## Asleep until the player picks up the first fuse (D-013).
+## Asleep until the player picks up the first fuse (D-019).
 func _dormant(board: Blackboard) -> void:
 	if board.fuses_collected >= 1:
 		_patrol(board)

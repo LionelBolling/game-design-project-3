@@ -1,5 +1,5 @@
 extends GutTest
-## GameFlow: which screen, the reveal, and reading the board (D-016).
+## GameFlow: which screen, the reveal, and reading the board (D-022).
 
 
 func test_picks_the_screen_from_the_game_state() -> void:

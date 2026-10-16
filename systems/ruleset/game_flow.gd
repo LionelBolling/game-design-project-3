@@ -1,7 +1,7 @@
 class_name GameFlow
 extends Node
 ## The end of a run: the caught screen, or the intruder reveal and then the
-## escaped screen, and R to restart (SYSTEM.md §6 Q6 and Q11, D-016).
+## escaped screen, and R to restart (SYSTEM.md §6 Q6 and Q11, D-022).
 ## Display only: it reads the board and never writes it.
 
 # The GDD palette (docs/ART.md).
@@ -106,7 +106,7 @@ func screen_rect() -> Rect2:
 
 
 ## The intruder reveal: a man in a cheap clown suit standing where Ronald was,
-## lit from above. A low-poly placeholder until the real model exists (D-016).
+## lit from above. A low-poly placeholder until the real model exists (D-022).
 func place_reveal(at: Vector3) -> Node3D:
 	var figure := Node3D.new()
 	_world.add_child(figure)
