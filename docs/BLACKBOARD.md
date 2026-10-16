@@ -4,7 +4,7 @@
 
 These are the only values that pass between systems. Four people and their agents build against them in parallel, so **nobody changes them casually**. In code, this table is `Blackboard.OWNERS` and the properties in `systems/core/blackboard.gd`; `tests/core/test_blackboard.gd` fails if the two drift apart.
 
-**Status:** DRAFT until all four owners sign off (`DECISIONS.md` P-001). Each owner should expect to change their own values after their interview. That's what the change protocol below is for.
+**Status:** in use; no sign-offs needed (D-024). Expect values to change as systems get built: that's what "Changing the contract" below is for.
 
 ## Rules
 
@@ -61,7 +61,7 @@ enum Game { PLAYING, CAUGHT, ESCAPED }
 
 ## Values we expect to need (not on the board yet)
 
-These came up in the Closing Time draft or the pitch notes. Each needs an interview answer first, then a contract change.
+These came up in the Closing Time draft or the pitch notes. Adding one is a contract change (below).
 
 | Likely value | Writer | Why | Raised in |
 |---|---|---|---|
@@ -71,7 +71,8 @@ These came up in the Closing Time draft or the pitch notes. Each needs an interv
 
 ## Changing the contract
 
-1. **Propose:** add an entry under "Proposed" in `DECISIONS.md`: the value, its type, its meaning, the writer, the readers, and why.
-2. **Agree:** the writer and every reader say yes. A new value that only you write and only you read doesn't belong on the board.
-3. **Change it all in one commit (Rickey, or someone with his OK):** `BLACKBOARD.md`, `blackboard.gd` (property and `OWNERS` entry), `board_types.gd` if an enum changes, the affected stubs, and their tests. Run the full suite. Move the `DECISIONS.md` entry to "Decided".
-4. **Tell everyone:** a line in every affected owner's "Needs from others" in `PROGRESS.md`.
+No sign-offs (D-024). Anyone can change the board, in one PR:
+
+1. **Change it all together:** `BLACKBOARD.md`, `blackboard.gd` (property and `OWNERS` entry), `board_types.gd` if an enum changes, the affected stubs, and their tests. Run the full suite. A new value that only you write and only you read doesn't belong on the board.
+2. **Log it:** a `DECISIONS.md` entry with the value, its type, its meaning, the writer, the readers, and why.
+3. **Tell everyone:** say so in the PR description, and add a line to every affected system's "Needs from others" in `PROGRESS.md`.
