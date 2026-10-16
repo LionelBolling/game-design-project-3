@@ -1,6 +1,6 @@
 # Enemy Ruleset (Rickey)
 
-> **Agents:** read `AGENTS.md` first, then this whole file. If §6 "Answers" is empty, start with the interview in §5. Don't plan or write code before it's done.
+> **Agents:** read `AGENTS.md` first, then this whole file. The interview in §5 is optional: use it if the owner wants help deciding.
 
 ## 1. What the GDD says
 
@@ -58,7 +58,19 @@ One at a time, multiple choice, recommended option first. Recommendations come f
 
 | # | Answer | Date |
 |---|---|---|
-| | | |
+| 1 | **C. The mock's fuses and breaker.** Collect 3 fuses, restore the breaker, then leave through the exit. This goes against the GDD's inventory cut; it's a deliberate choice (log it in `DECISIONS.md`). Needs shared values for fuses and the breaker (a contract proposal at the end of the interview). | 2026-10-14 |
+| 2 | **A. Six modes:** PATROL, INVESTIGATE, CHASE, plus SEEK (the "I see you" walk to your spot), CAMP (waits at the ball-pit rim) and CATCH (the stare, then the jumpscare). Adding the three new modes is a contract change to `BoardTypes.Mode`. | 2026-10-14 |
+| 2a | *(Added after Q1.)* **A. The flashlight never freezes Ronald.** If Lionel and Aiden keep the flashlight (team Q4), it's only light and makes the player easier to spot: it helps find fuses but gives you away. The mock's freeze-in-the-beam rule is dropped. Tell Lionel and Aiden (Hiding may need to publish whether the flashlight is on, for Senses). | 2026-10-14 |
+| 3 | **A. He never enters the ball pit, and camps at the rim.** If the player's hiding leaks while they're in the pit, he walks to the nearest point on the rim, faces them for **10 s** (CAMP), then goes back to PATROL. No fuse is ever placed in the pit, so waiting there never wins. The pit's id comes from Hiding (`hide_spot`); Roaming finds the nearest reachable point (agree with Naomi on a `target_unreachable`-style value). | 2026-10-14 |
+| 4 | **A. "I see you", then SEEK to the exact spot.** When `location_leaked` turns true, play the "I see you" whisper (from right behind the player's head) and switch to SEEK with the target at the player's spot. **At least 5 s** between the whisper and his arrival: if he's closer than that, he waits before walking. Still in the spot when he arrives → CATCH. Spot empty → INVESTIGATE around it. SEEK fires **once per visit** to a spot (Ruleset remembers the visit; it never writes Hiding's timer). In the ball pit, Q3 applies (CAMP instead). | 2026-10-14 |
+| 5 | **A. A cue, then a chase about 10% faster than the player's run** (Closing Time: 4.2 m/s against 3.8; set the real number once Lionel picks the run speed). You can't outrun him in a straight line; you escape by breaking line of sight or diving into the ball pit. The cue (two clown-horn honks) plays when he enters CHASE from any other mode, so the Ruleset plays it. Tell Aiden (his Senses Q6). | 2026-10-14 |
+| 6 | **A. Catch range 3 m, a 2 s stare, then a sprint.** CATCH starts when he's within **3 m** during a chase, or reaches the spot while the player is still in it (Q4). He stops, faces the player and stares in total silence for **2 s**, then sprints at them screaming; the screen cuts to black and `game_state` becomes CAUGHT when the sprint arrives. Hiding locks the player's controls while `ronald_mode == CATCH` (tell Lionel). The run then restarts. | 2026-10-14 |
+| 7 | **A. 2 s out of sight, then search.** After **2 s** without SEEN during a chase, switch to INVESTIGATE at `last_known_position`: walk there and look around for about **5 s**, then PATROL. Hearing something (HEARD) uses the same search. | 2026-10-14 |
+| 8 | **A. Ronald only.** One monster in v1. Ronald's numbers (ranges, times, speeds) live in a data resource (for example `ronald_rules.tres`), not hard-coded, so a second mascot later is new data, not new code. The board stays single-enemy. | 2026-10-14 |
+| 9 | **B. Statue posing is in.** A seventh mode, POSE (add it to the Q2 contract change). On about **1 in 4** patrol loops, the Ruleset switches to POSE; Roaming walks him to a bench pose spot (pose spots belong to the patrol route, so Roaming picks one and ignores `target_position`, as in PATROL) and he sits frozen like a statue for **20–40 s**, then back to PATROL. If the player comes within **1 m**, he wakes (**1 s**) and goes to CHASE. Needs: bench pose spots in the level (Aiden), a seated/statue pose for the model (Naomi), optionally a real decoy statue nearby (Aiden). | 2026-10-14 |
+| 10 | **A. Closing Time's speeds:** patrol **1.4 m/s**, INVESTIGATE and SEEK **2.0 m/s**, CHASE **about 10% over the kid's run** (Q5), CATCH sprint **about 8 m/s**. All of them live in Ronald's data resource (Q8) and get tuned in playtests. | 2026-10-14 |
+| 11 | **C. Keep the mock's opening (waking in the ball pit), and a full intruder reveal ending.** When the player escapes, the lights come on and a real man in a cheap clown suit is standing where Ronald was. Non-interactive, a few seconds, then the win screen. Needs a second character model (a man in a cheap clown suit); decide who makes it with Naomi and Aiden. | 2026-10-14 |
+| 12a | *(Added after Q1.)* **B. Ronald is dormant until the first fuse,** like the mock. The opening stretch is safe exploration; picking up the first fuse wakes him into PATROL. Needs a way to say "not active yet" (proposed: an eighth mode, DORMANT, in which Roaming keeps his body hidden and still). | 2026-10-14 |
 
 ## 7. Suggested build steps (starting point for `PLAN.md`)
 

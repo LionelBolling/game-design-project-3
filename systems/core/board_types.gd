@@ -10,11 +10,19 @@ enum Hide { EXPOSED, HIDDEN }
 ## What Ronald perceives about the player this frame. Written by Senses.
 enum Detect { NONE, HEARD, SEEN }
 
-## What Ronald is trying to do. Written by the Ruleset.
+## What Ronald is trying to do. Written by the Ruleset. New modes go at the
+## end so the numbers of existing ones never change.
 ## PATROL: Roaming walks its own patrol route and ignores target_position.
 ## INVESTIGATE: go to target_position and check it out.
 ## CHASE: go to target_position (the player) fast.
-enum Mode { PATROL, INVESTIGATE, CHASE }
+## DORMANT: not active yet; Roaming keeps his body hidden and still.
+## POSE: Roaming walks him to a bench of its choosing and seats him like a
+##   statue (target_position ignored; at_target true once seated).
+## SEEK: walk to the player's leaked hiding spot ("I see you").
+## CAMP: wait at the ball-pit rim (Roaming stops at the nearest reachable point).
+## CATCH: stare, then sprint. With move_speed 0 Roaming turns him to face
+##   target_position; Hiding locks the player's controls.
+enum Mode { PATROL, INVESTIGATE, CHASE, DORMANT, POSE, SEEK, CAMP, CATCH }
 
 ## Is the run still going? Written by the Ruleset.
 enum Game { PLAYING, CAUGHT, ESCAPED }

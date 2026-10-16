@@ -59,3 +59,16 @@ func test_every_owner_is_one_of_the_four_systems() -> void:
 
 func test_snapshot_lists_every_value_in_contract_order() -> void:
 	assert_eq(board.snapshot().keys(), Blackboard.OWNERS.keys())
+
+
+func test_contract_v0_2_values_have_the_right_owners() -> void:
+	assert_eq(Blackboard.OWNERS.get(&"fuses_collected"), &"hiding")
+	assert_eq(Blackboard.OWNERS.get(&"breaker_on"), &"hiding")
+	assert_eq(Blackboard.OWNERS.get(&"target_unreachable"), &"roaming")
+
+
+func test_existing_modes_keep_their_numbers() -> void:
+	assert_eq(BoardTypes.Mode.PATROL, 0)
+	assert_eq(BoardTypes.Mode.INVESTIGATE, 1)
+	assert_eq(BoardTypes.Mode.CHASE, 2)
+	assert_eq(BoardTypes.Mode.size(), 8, "PATROL, INVESTIGATE, CHASE + DORMANT, POSE, SEEK, CAMP, CATCH")

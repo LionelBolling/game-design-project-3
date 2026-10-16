@@ -1,10 +1,10 @@
 # Blackboard contract
 
-**Version:** v0.1 **DRAFT** · **Date:** 2026-10-09
+**Version:** v0.2 · **Date:** 2026-10-16 · v0.2 adds the Ruleset's values (P-002 in `DECISIONS.md`)
 
 These are the only values that pass between systems. Four people and their agents build against them in parallel, so **nobody changes them casually**. In code, this table is `Blackboard.OWNERS` and the properties in `systems/core/blackboard.gd`; `tests/core/test_blackboard.gd` fails if the two drift apart.
 
-**Status:** DRAFT until all four owners sign off (`DECISIONS.md` P-001). Each owner should expect to change their own values after their interview. That's what the change protocol below is for.
+**Status:** in use; no sign-offs needed (D-024). Expect values to change as systems get built: that's what "Changing the contract" below is for.
 
 ## Rules
 
@@ -24,7 +24,9 @@ These are the only values that pass between systems. Four people and their agent
 | `hide_spot` | `StringName` | Id of the spot the player is in; `&""` when exposed | `&""` | `&"stub_spot"` while hidden | Ruleset, Senses |
 | `hide_time` | `float` s | Time in the current spot; 0 when exposed | `0` | Counts while hidden | Ruleset |
 | `location_leaked` | `bool` | The player hid past the limit and their spot is given away (GDD scope) | `false` | True after 10 s hidden | Ruleset, Senses |
-| `player_at_exit` | `bool` | The player is in the exit zone. **Placeholder** until the team decides how escaping works (GAME_SPEC Q1). | `false` | True while X is held | Ruleset |
+| `player_at_exit` | `bool` | The player is in the exit zone. Escaping needs this **and** `breaker_on` (D-019). | `false` | True while X is held | Ruleset |
+| `fuses_collected` | `int` 0–3 | How many fuses the player has picked up (v0.2) | `0` | F adds one, up to 3 | Ruleset, display |
+| `breaker_on` | `bool` | The player restored the breaker; needs all 3 fuses (v0.2) | `false` | B, once 3 fuses are in | Ruleset, display (lights) |
 
 ## Enemy Senses (Aiden)
 
@@ -37,8 +39,8 @@ These are the only values that pass between systems. Four people and their agent
 
 | Value | Type | Meaning | Default | Stub writes | Read by |
 |---|---|---|---|---|---|
-| `ronald_mode` | `BoardTypes.Mode` | `PATROL`, `INVESTIGATE` or `CHASE` | `PATROL` | SEEN → CHASE; HEARD or leaked → INVESTIGATE; else PATROL | Roaming, Senses, display |
-| `target_position` | `Vector3` | Where Ronald should go. **Ignored in `PATROL`**: the patrol route is Roaming's (GDD: Roaming owns "patrol state"). | `(0,0,0)` | Player or last known position | Roaming |
+| `ronald_mode` | `BoardTypes.Mode` | What Ronald is doing: one of eight modes (below). **Hiding locks the player's controls while it's `CATCH`** (v0.2). | `PATROL` | SEEN → CHASE; HEARD or leaked → INVESTIGATE; else PATROL | Roaming, Senses, Hiding, display |
+| `target_position` | `Vector3` | Where Ronald should go. **Ignored in `PATROL`, `DORMANT` and `POSE`**: the patrol route and the benches are Roaming's (GDD: Roaming owns "patrol state"). In `CATCH` with `move_speed` 0, Roaming turns him to face it. | `(0,0,0)` | Player or last known position | Roaming |
 | `move_speed` | `float` m/s | How fast Ronald should move | `0` | 1.5 / 2.0 / 3.5 by mode | Roaming |
 | `game_state` | `BoardTypes.Game` | `PLAYING`, `CAUGHT` or `ESCAPED` | `PLAYING` | CAUGHT within 1 m while chasing; ESCAPED at exit | everyone, display |
 
@@ -48,30 +50,43 @@ These are the only values that pass between systems. Four people and their agent
 |---|---|---|---|---|---|
 | `enemy_position` | `Vector3` | Ronald's feet | `(0,0,0)` | Starts at `(-6,0,-4)`, walks straight lines | Senses, Ruleset, display |
 | `enemy_velocity` | `Vector3` m/s | Ronald's movement this frame; its direction is where he faces | `(0,0,0)` | Direction × move_speed | Senses, display |
-| `at_target` | `bool` | Ronald has reached `target_position` | `false` | Within 0.3 m | Ruleset |
+| `at_target` | `bool` | Ronald has reached `target_position`; in `POSE`, he's seated on his bench | `false` | Within 0.3 m | Ruleset |
+| `target_unreachable` | `bool` | Ronald can't reach `target_position` (the ball pit) and went to the nearest reachable point instead (v0.2) | `false` | Always false | Ruleset |
 
 ## Enums (`systems/core/board_types.gd`)
 
 ```gdscript
 enum Hide { EXPOSED, HIDDEN }
 enum Detect { NONE, HEARD, SEEN }
-enum Mode { PATROL, INVESTIGATE, CHASE }
+enum Mode { PATROL, INVESTIGATE, CHASE, DORMANT, POSE, SEEK, CAMP, CATCH }
 enum Game { PLAYING, CAUGHT, ESCAPED }
 ```
 
+**The modes** (new ones go at the end, so existing numbers never change):
+
+| Mode | Meaning | Roaming does |
+|---|---|---|
+| `PATROL` | Walking his rounds | Follows its own patrol route |
+| `INVESTIGATE` | Checking out a noise or a lost trail | Walks to `target_position` |
+| `CHASE` | Running at the player | Walks to `target_position` fast |
+| `DORMANT` (v0.2) | Not active yet (before the first fuse) | Keeps his body hidden and still |
+| `POSE` (v0.2) | Frozen on a bench like a statue | Picks a bench, walks there, seats him (`at_target` once seated) |
+| `SEEK` (v0.2) | Walking to the player's leaked hiding spot ("I see you") | Walks to `target_position` |
+| `CAMP` (v0.2) | Waiting at the ball-pit rim | Walks toward `target_position`, stops at the nearest reachable point |
+| `CATCH` (v0.2) | The stare, then the sprint | Faces `target_position` at speed 0, then sprints to it |
+
 ## Values we expect to need (not on the board yet)
 
-These came up in the Closing Time draft or the pitch notes. Each needs an interview answer first, then a contract change.
+These came up in the Closing Time draft or the pitch notes. Adding one is a contract change (below).
 
 | Likely value | Writer | Why | Raised in |
 |---|---|---|---|
-| More `Mode`s: `SEEK` ("I see you"), `CAMP` (waits at the ball-pit rim), `CATCH` (stare, then jumpscare) | Ruleset | Pitch-note rules 1, 2 and 4 | `systems/ruleset/SYSTEM.md` |
-| `target_unreachable: bool` | Roaming | Ronald was sent somewhere he can't go, such as into the ball pit | `systems/roaming/SYSTEM.md` |
 | `player_in_light: bool` | Hiding | If being lit makes you easier to see | `systems/hiding/SYSTEM.md` |
 
 ## Changing the contract
 
-1. **Propose:** add an entry under "Proposed" in `DECISIONS.md`: the value, its type, its meaning, the writer, the readers, and why.
-2. **Agree:** the writer and every reader say yes. A new value that only you write and only you read doesn't belong on the board.
-3. **Change it all in one commit (Rickey, or someone with his OK):** `BLACKBOARD.md`, `blackboard.gd` (property and `OWNERS` entry), `board_types.gd` if an enum changes, the affected stubs, and their tests. Run the full suite. Move the `DECISIONS.md` entry to "Decided".
-4. **Tell everyone:** a line in every affected owner's "Needs from others" in `PROGRESS.md`.
+No sign-offs (D-024). Anyone can change the board, in one PR:
+
+1. **Change it all together:** `BLACKBOARD.md`, `blackboard.gd` (property and `OWNERS` entry), `board_types.gd` if an enum changes, the affected stubs, and their tests. Run the full suite. A new value that only you write and only you read doesn't belong on the board.
+2. **Log it:** a `DECISIONS.md` entry with the value, its type, its meaning, the writer, the readers, and why.
+3. **Tell everyone:** say so in the PR description, and add a line to every affected system's "Needs from others" in `PROGRESS.md`.

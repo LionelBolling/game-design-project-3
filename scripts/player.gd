@@ -6,6 +6,7 @@ const WALK_SPEED := 2.5
 const RUN_SPEED := 4.2
 const SWIM_SPEED := 3.2
 const BATTERY_DRAIN := 0.84
+const BATTERY_DRAIN: float = 1.68
 var camera: Camera3D
 var hand: Node3D
 var lamp: SpotLight3D
@@ -17,6 +18,9 @@ var battery := 100.0
 var flashlight_uses_battery := true
 var flashlight_on := false
 var control_enabled := false
+## Hiding owns movement locking; mouse look and flashlight still work.
+var hiding_locked: bool = false
+var table_look_level: bool = false
 var sensitivity := 0.0022
 var reduce_motion := false
 var pitch := 0.0
@@ -189,9 +193,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not control_enabled or get_tree().paused:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * sensitivity)
-		pitch = clampf(pitch - event.relative.y * sensitivity, -1.35, 1.35)
-		camera.rotation.x = pitch
+		apply_mouse_look(event.relative)
 	if event.is_action_pressed("flashlight") and toggle_cooldown <= 0:
 		toggle_cooldown = 0.3
 		set_flashlight(not flashlight_on)
@@ -199,6 +201,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func swimming_speed(sprinting: bool) -> float:
 	return (RUN_SPEED if sprinting else SWIM_SPEED) * (0.5 if flashlight_on else 1.0)
+func apply_mouse_look(relative: Vector2) -> void:
+	rotate_y(-relative.x * sensitivity)
+	pitch = 0.0 if table_look_level else clampf(pitch - relative.y * sensitivity, -1.35, 1.35)
+	camera.rotation.x = pitch
 
 func _physics_process(delta: float) -> void:
 	if not control_enabled:
@@ -207,6 +213,14 @@ func _physics_process(delta: float) -> void:
 	beam_time += delta
 	update_flashlight_charge(delta)
 	if movement_locked:
+	if flashlight_on:
+		drain_battery(delta)
+		update_battery_indicator()
+		if battery <= 0:
+			set_flashlight(false)
+		# Gentle low-battery instability, never a full-screen strobe.
+		lamp.light_energy = 3.8 if battery > 18 else 2.6 + sin(beam_time * 17) * 0.3
+	if hiding_locked:
 		velocity = Vector3.ZERO
 		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -235,10 +249,14 @@ func _physics_process(delta: float) -> void:
 	camera.fov = lerpf(camera.fov, 79.0 if moving and speed > WALK_SPEED and not reduce_motion else 76.0, delta * 4)
 
 func beam_hits(point: Vector3) -> bool:
-	if not flashlight_on:
+	if not flashlight_on or hiding_locked:
 		return false
 	var offset := point - camera.global_position
 	if offset.length() > 14 or -camera.global_basis.z.dot(offset.normalized()) < 0.89:
 		return false
 	var query := PhysicsRayQueryParameters3D.create(camera.global_position, point, 1)
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+func drain_battery(delta: float) -> void:
+	if flashlight_on:
+		battery = maxf(0.0, battery - BATTERY_DRAIN * maxf(delta, 0.0))
