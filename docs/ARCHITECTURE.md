@@ -45,7 +45,7 @@ Before the first frame, the Director runs the same order once with `setup(board)
 | `sim_system.gd` | `SimSystem`: the base class for every system and stub. Has `system_id`, `setup(board)` and `tick(board, delta)`. |
 | `director.gd` | `Director`: owns the board, runs `setup` once, then gives each child system one turn per physics frame in `ORDER`. Joins the `director` group. |
 | `board_overlay.gd` | `BoardOverlay`: press **F2** to see every board value live, grouped by owner. |
-| `sandbox/sandbox.tscn` | A top-down test scene: Director plus all four stubs, drawn as markers. Blue = player (gray when hidden), yellow/orange/red = Ronald patrolling/investigating/chasing. WASD move, H hide, hold X exit, R restart. |
+| `sandbox/sandbox.tscn` | A top-down test scene: Director plus all four stubs, drawn as markers. Blue = player (gray when hidden); Ronald is colored by mode (yellow patrol, orange investigate, red chase, and so on). WASD move, H hide, F fuse, B breaker, hold X exit, R restart. |
 
 Each system's stub lives in its own folder: `systems/hiding/hiding_stub.gd`, `systems/senses/senses_stub.gd`, `systems/ruleset/ruleset_stub.gd`, `systems/roaming/roaming_stub.gd`. **Keep your stub working on `main`** even after your real system exists: tests and teammates still use it.
 

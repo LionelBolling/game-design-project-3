@@ -54,3 +54,21 @@ func test_moving_makes_noise_and_coming_out_resets_the_timer() -> void:
 	assert_eq(board.hide_time, 0.0)
 	assert_gt(board.player_noise, 0.0)
 	assert_almost_eq(board.player_position.x, HidingStub.SPEED * 0.5, 0.001)
+
+
+func test_the_breaker_needs_all_three_fuses() -> void:
+	hiding.fuses = 2
+	hiding.breaker = true
+	_tick(0.1)
+	assert_false(board.breaker_on)
+	hiding.fuses = 3
+	_tick(0.1)
+	assert_true(board.breaker_on)
+	assert_eq(board.fuses_collected, 3)
+
+
+func test_hides_in_the_spot_named_by_spot_id() -> void:
+	hiding.spot_id = &"ball_pit"
+	hiding.hidden = true
+	_tick(0.1)
+	assert_eq(board.hide_spot, &"ball_pit")
