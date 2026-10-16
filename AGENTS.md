@@ -29,7 +29,7 @@ First session, or unsure how systems connect: read [`docs/ARCHITECTURE.md`](docs
 - If it isn't clear which teammate you're working for, **ask** before editing.
 - Edit only that owner's files: `systems/<system>/`, `tests/<system>/`, and **their own section** of `docs/PROGRESS.md`. Rickey owns both `systems/ruleset/` and `systems/core/`.
 - **Shared files are Rickey's:** `systems/core/` (blackboard, Director, sandbox), `project.godot`, `export_presets.cfg`, and the shared docs in `docs/`. Anyone else proposes a change to him.
-- **Aiden's mock game** (`scripts/`, `scenes/`, `shaders/`, `tools/`, `tests/smoke.gd`, `tests/visual.gd`) is **reference only**. Copy what you need into your own system folder; don't edit the mock. The assets (`Blender models/`, `audio/`, `Reference photos/`) are Aiden's: instance them, don't change them.
+- **Aiden's mock game** (`scripts/`, `scenes/`, `shaders/`, `tools/`, `tests/smoke.gd`, `tests/visual.gd`) is the F5 game, and it runs the board (D-023): `scripts/game.gd` holds a Director with Lionel's hiding (`LegacyHiding`), the real Ruleset, and stand-ins for Senses and Roaming (`scripts/legacy_*.gd`). Change the mock only in a PR that says what it changes, reviewed by whoever owns that behavior. Ronald's behavior is the Ruleset's: don't add enemy rules to `scripts/stalker.gd`. The assets (`Blender models/`, `audio/`, `Reference photos/`) are Aiden's: instance them, don't change them.
 
 ## Rule 3: Talk only through the blackboard
 

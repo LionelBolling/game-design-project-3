@@ -128,8 +128,17 @@ systems/
   senses/                    Aiden
 tests/
   core/  hiding/  ruleset/  roaming/  senses/
-scripts/ scenes/ shaders/ tools/      Aiden's mock (reference only)
+scripts/ scenes/ shaders/ tools/      Aiden's mock: the F5 game, running the board (D-023)
 Blender models/  audio/  Reference photos/   assets (Aiden's)
 ```
 
-**The game that Run Project (F5) starts** is still Aiden's mock (`scenes/main.tscn`). When enough real systems exist, Rickey adds `systems/core/main.tscn` (the level, the Director with the real systems, UI) and points `project.godot` at it. Until then, the sandbox and each owner's test scene are where the new game runs.
+**The game that Run Project (F5) starts** is Aiden's mock (`scenes/main.tscn`), and it runs the board (D-023). `scripts/game.gd` holds a Director whose four children are:
+
+| Slot | In the F5 game | Replaced by |
+|---|---|---|
+| hiding | `LegacyHiding` (`scripts/legacy_hiding.gd`): Lionel's `HidingSystem`, plus the game's fuses, breaker and exit, and the stare hold | Lionel's system writing those values itself |
+| senses | `LegacySenses` (`scripts/legacy_senses.gd`): the mock's sight (12 m, walls block) and the stub's hearing | Aiden's system |
+| ruleset | `RulesetSystem`, the real one (end screens off: the F5 game draws its own) | — |
+| roaming | `LegacyRoaming` (`scripts/legacy_roaming.gd`): walks the mock Ronald (`scripts/stalker.gd`, `driven = true`) on the mock's navigation grid | Naomi's system |
+
+`game.gd` steps the Director each physics frame and ends the run when `game_state` turns CAUGHT or ESCAPED. To swap in a real system, replace that one child and keep its place. The sandbox and each owner's test scene still run the stubs.

@@ -66,7 +66,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
 
 ## Steps
 
-- [ ] **1. Ronald's core rules: patrol, investigate, chase, losing track** · branch `ruleset/01-core-rules`
+- [x] **1. Ronald's core rules: patrol, investigate, chase, losing track** · branch `ruleset/01-core-rules`
       Test: `tests/ruleset/test_ronald_rules.gd` (below)
       Done when: the tests pass; no scene needed yet.
 
@@ -271,7 +271,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	speed = tuning.patrol_speed
   ```
 
-- [ ] **2. Plug the Ruleset into the Director, plus a test scene** · branch `ruleset/02-system`
+- [x] **2. Plug the Ruleset into the Director, plus a test scene** · branch `ruleset/02-system`
       Test: `tests/ruleset/test_ruleset_system.gd` (below)
       Done when: in `systems/ruleset/test/ruleset_test.tscn` (F6), walking near Ronald turns him red and he chases; break away and he turns orange and searches, then yellow and patrols. He can't catch you yet (step 5).
 
@@ -352,7 +352,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
 
   Test scene: copy `systems/core/sandbox/sandbox.tscn` to `systems/ruleset/test/ruleset_test.tscn` and change the `Ruleset` node's script to `res://systems/ruleset/ruleset_system.gd`. Keep the other three stubs.
 
-- [ ] **3. Contract v0.2 (P-002)** · branch `core/contract-v0.2` · **only after Lionel, Naomi and Aiden sign P-002 in `docs/DECISIONS.md`**
+- [x] **3. Contract v0.2 (P-002)** · branch `core/contract-v0.2` · **only after Lionel, Naomi and Aiden sign P-002 in `docs/DECISIONS.md`**
       Test: additions to `tests/core/test_blackboard.gd`, the stub tests, and a new `tests/core/test_sandbox_colors.gd` (below)
       Done when: the suite passes, the sandbox shows all eight modes, and P-002 moves to "Decided" under the next free D- number.
 
@@ -420,7 +420,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_true(board.at_target)
   ```
 
-- [ ] **4. Dormant until the first fuse** · branch `ruleset/04-dormant`
+- [x] **4. Dormant until the first fuse** · branch `ruleset/04-dormant`
       Test: `tests/ruleset/test_ronald_dormant.gd`
       Done when: in the test scene Ronald is hidden until you press F once.
 
@@ -456,7 +456,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(rules.mode, BoardTypes.Mode.PATROL)
   ```
 
-- [ ] **5. Catching: a stare, a sprint, then CAUGHT** · branch `ruleset/05-catch`
+- [x] **5. Catching: a stare, a sprint, then CAUGHT** · branch `ruleset/05-catch`
       Test: `tests/ruleset/test_ronald_catch.gd`
       Done when: in the test scene, letting him reach 3 m freezes him for 2 s, then he lunges and the run ends CAUGHT.
 
@@ -519,7 +519,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_true(rules.cues.is_empty())
   ```
 
-- [ ] **6. "I see you" (SEEK)** · branch `ruleset/06-seek`
+- [x] **6. "I see you" (SEEK)** · branch `ruleset/06-seek`
       Test: `tests/ruleset/test_ronald_seek.gd`
       Done when: in the test scene, hiding (H) for 10 s (the stub's leak time) makes him walk to you; leave before he arrives and he searches, stay and he catches you.
 
@@ -601,7 +601,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_has(rules.cues, &"whisper")
   ```
 
-- [ ] **7. The ball pit (CAMP)** · branch `ruleset/07-camp`
+- [x] **7. The ball pit (CAMP)** · branch `ruleset/07-camp`
       Test: `tests/ruleset/test_ronald_camp.gd`
       Done when: needs a pit spot in the test scene; until Lionel's spots exist, set `HidingStub`'s spot id to `ball_pit` in the test scene's Inspector and check he camps, then patrols after 10 s.
 
@@ -679,7 +679,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(rules.mode, BoardTypes.Mode.CAMP)
   ```
 
-- [ ] **8. Statue posing (POSE)** · branch `ruleset/08-pose`
+- [x] **8. Statue posing (POSE)** · branch `ruleset/08-pose`
       Test: `tests/ruleset/test_ronald_pose.gd`
       Done when: in the test scene he sometimes walks to the stub's pose point and freezes; walking up to him (within 1 m) wakes him into a chase.
 
@@ -753,7 +753,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(rules.mode, BoardTypes.Mode.CHASE)
   ```
 
-- [ ] **9. Escaping** · branch `ruleset/09-escape`
+- [x] **9. Escaping** · branch `ruleset/09-escape`
       Test: `tests/ruleset/test_ronald_escape.gd`
       Done when: in the test scene, F three times, B, then hold X ends the run ESCAPED; X without the breaker does nothing.
 
@@ -801,7 +801,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(rules.game_state, BoardTypes.Game.ESCAPED)
   ```
 
-- [ ] **10. Cue sounds: honk, whisper, scream** · branch `ruleset/10-cues`
+- [x] **10. Cue sounds: honk, whisper, scream** · branch `ruleset/10-cues`
       Test: `tests/ruleset/test_cue_player.gd`
       Done when: in the test scene you hear the honk when a chase starts, the whisper when your spot leaks, and the scream at the lunge.
 
@@ -825,7 +825,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(cues.last_played, &"")
   ```
 
-- [ ] **11. Caught and escaped screens, the reveal, restart** · branch `ruleset/11-game-flow`
+- [x] **11. Caught and escaped screens, the reveal, restart** · branch `ruleset/11-game-flow`
       Test: `tests/ruleset/test_game_flow.gd`
       Done when: CAUGHT cuts to black with "Caught. Press R."; ESCAPED shows the reveal (a placeholder figure where Ronald stood, lights up) then "You escaped. Press R."; R restarts. Borrow the panels and the restart from the demo's `hud.gd` and `game.gd`.
 
@@ -848,23 +848,9 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(reveal.global_position, Vector3(3, 0, -2))
   ```
 
-- [ ] **12. Into the main game** · branch `core/main-scene` · **after Aiden's level and Lionel's player exist**
-      Test: a new `tests/core/test_main_scene.gd` that loads `systems/core/main.tscn` and checks the Director's children are `hiding, senses, ruleset, roaming`
-      Done when: Run Project (F5) starts the new game; `project.godot` points at `systems/core/main.tscn` (an "Ask first" change, in this PR).
-
-  ```gdscript
-  extends GutTest
-  ## The main scene runs the four real systems in order.
-
-
-  func test_main_scene_has_the_four_systems_in_order() -> void:
-  	var main: Node = add_child_autofree(load("res://systems/core/main.tscn").instantiate())
-  	var director := main.get_tree().get_first_node_in_group(Director.GROUP) as Director
-  	var ids: Array[StringName] = []
-  	for child in director.get_children():
-  		ids.append((child as SimSystem).system_id)
-  	assert_eq(ids, Director.ORDER)
-  ```
+- [x] **12. Into the main game** · branch `ruleset/12-f5-hookup` · **changed 2026-10-16 (D-023):** instead of a new `systems/core/main.tscn`, the F5 game (`scenes/main.tscn`) runs the board, with the real Ruleset and stand-ins for Senses and Roaming (`scripts/legacy_*.gd`). Rickey chose this so the rules drive Ronald in F5 and on the web now. `project.godot` is unchanged.
+      Test: `tests/core/test_f5_ruleset.gd` (the four systems in order, Ronald asleep until the first fuse, seen → chase → stare → CAUGHT, the powered exit wins, the exit needs the breaker), plus `test_legacy_hiding.gd`, `test_legacy_senses.gd`, `test_legacy_roaming.gd` and `test_stalker_driven.gd`.
+      Done when: F5 plays with Ronald following the rules; full suite green.
 
 ## Needs from others
 
