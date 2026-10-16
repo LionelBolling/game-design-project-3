@@ -13,13 +13,18 @@ Every agent reads this first and updates **only its owner's section** at the end
 
 ## Core / foundation (Rickey)
 
-- **Status:** v0.1 done
-- **Updated:** 2026-10-09 (Claude Code, for Rickey)
-- **Done:** blackboard with ownership enforcement, Director with `setup()` and turn order, `BoardOverlay` (F2), four stubs, sandbox scene, tests for the board, the Director and the stub pipeline.
-- **Next:** get P-001 signed by all four owners. Add `systems/core/main.tscn` once a level and a real system exist. Apply contract changes as owners propose them.
-- **Needs from others:** each owner reviews `docs/BLACKBOARD.md` for their values.
+- **Status:** contract v0.2 built (P-002 still unsigned); the F5 game runs the board (D-023), on `ruleset/12-f5-hookup`
+- **Updated:** 2026-10-16 (Claude Code, for Rickey)
+- **Done:** blackboard with ownership enforcement, Director with `setup()` and turn order, `BoardOverlay` (F2), four stubs, sandbox scene, tests. **Contract v0.2:** five new modes (DORMANT, POSE, SEEK, CAMP, CATCH), `fuses_collected` and `breaker_on` (Hiding), `target_unreachable` (Roaming); the stubs and sandbox handle all eight modes. **The F5 game runs the board:** `scripts/game.gd`'s Director holds `LegacyHiding`, `LegacySenses`, the real `RulesetSystem` and `LegacyRoaming` (see `docs/ARCHITECTURE.md`, "The game that Run Project (F5) starts").
+- **Next:** Lionel's PR #5 merges, then this branch's PR. P-001 and P-002 signed by all four owners.
+- **Needs from others:** each owner reviews `docs/BLACKBOARD.md` for their values and signs P-001 and P-002 in `docs/DECISIONS.md`.
 - **Handoff notes:**
+  - **Replacing a stand-in:** in `game.gd`'s `_setup_hiding()`, swap that one Director child for your real system and keep its place. Aiden replaces `LegacySenses`, Naomi `LegacyRoaming`. Lionel can drop `LegacyHiding` once `HidingSystem` writes `fuses_collected`, `breaker_on` and `player_at_exit` and holds the player during CATCH.
+  - The mock Ronald (`scripts/stalker.gd`) has `driven = true` in F5: his own brain (beam freeze, beam pounce, catching) is off. `active = false` takes him out of play: Roaming stops moving him and Senses stops sensing.
+  - In tests that teleport Ronald, step the Director once (`director.step(0.0)`) so Roaming reports where he is; the rules read his position from the board.
+  - Smoke test (`tests/smoke.gd`, Aiden's): 4 checks describe the old brain or were already failing: "Clown model and imported animation load" (PR #5), "Awakened clown patrols the map" (he now sleeps until the first fuse), "Flashlight freezes visible stalker" (D-021), "Stalker contact triggers failure" (now the stare). They need Aiden's update.
   - Write starting values in `setup()`, not on the first `tick()` (see `docs/ARCHITECTURE.md`, "One frame").
+  - Recording frames on macOS needs `--always-on-top`, or the recording freezes (`CLAUDE.md`).
   - `ERROR: Blackboard: ...` lines in the test output are expected: those tests trigger a refused write on purpose.
   - Display code finds the board through `get_tree().get_first_node_in_group(Director.GROUP)`.
 
@@ -58,12 +63,16 @@ Every agent reads this first and updates **only its owner's section** at the end
 
 ## Enemy Ruleset (Rickey)
 
-- **Status:** not started
-- **Updated:** -
-- **Done:** stub only (`systems/ruleset/ruleset_stub.gd`)
-- **Next:** interview (`systems/ruleset/SYSTEM.md` §5), including team question Q1 (how you escape)
-- **Needs from others:** -
-- **Handoff notes:** -
+- **Status:** plan steps 1–12 built; Ronald in the F5 game follows the rules. On `ruleset/12-f5-hookup` (built on Lionel's PR #5, with PR #4 and `ruleset/build` merged in): 178 tests passing.
+- **Updated:** 2026-10-16 (Claude Code, for Rickey)
+- **Done:** `RonaldRules` (all eight modes: dormant until the first fuse, patrol, statue posing, investigate, "I see you" SEEK, ball-pit CAMP, chase, catch), `RonaldTuning` + `ronald_tuning.tres` (every number), `RulesetSystem` (with an `end_screens` switch), `CuePlayer` (honk, whisper, scream; placeholder `sting.wav`; a null sound is silent), `GameFlow` (caught and escaped screens, the intruder reveal placeholder, R to restart), the test scene `systems/ruleset/test/ruleset_test.tscn`, and the F5 hook-up (D-023). My decisions are D-019 to D-022 (renumbered after Lionel's D-013 to D-018).
+- **Next:** PR #5 merges, then this branch's PR into `main` (PR #4 is folded in and can close). Then the web export.
+- **Needs from others:** Lionel: review the `test_main_hiding.gd` changes; the kid's run speed (sets `chase_speed`, now 4.6 against the mock's 4.2 run); the ball pit's spot id (`ball_pit`; the F5 game has no ball-pit spot right now, so CAMP never fires there); writing `fuses_collected`, `breaker_on`, `player_at_exit` and the CATCH hold in his own system. Naomi: `target_unreachable`, DORMANT (hidden body), POSE (bench, seated), CATCH (face at speed 0, then sprint). Aiden: a statue bench (in F5 he poses where he stands); update the smoke test's old-brain checks. Team: real honk, whisper and scream sounds; the intruder model.
+- **Handoff notes:**
+  - **Unreachable counts as arrived.** If Roaming can't reach `target_position`, set `target_unreachable`: INVESTIGATE, SEEK, CAMP and the CATCH sprint all treat it as arriving. Without it, Ronald waits for `at_target` forever.
+  - In POSE, `at_target` means "seated". The pose timer and the wake check only start once it's true.
+  - One-off cues are on `RonaldRules.cues` for a single frame; `CuePlayer` plays them. The whisper comes from 0.3 m behind the active camera. In F5 the whisper and scream are silent (Lionel's voice line and catch scream play instead); the honk is the rules' own.
+  - In F5 the run ends through the board: `game.gd` calls `finish()` when `game_state` turns CAUGHT or ESCAPED. The powered front door sets `game.at_exit`, which `LegacyHiding` writes as `player_at_exit`.
 
 ## Roaming Enemies (Naomi)
 

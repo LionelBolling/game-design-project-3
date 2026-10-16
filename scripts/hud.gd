@@ -79,7 +79,7 @@ func _draw() -> void:
 		draw_rect(Rect2(0, 0, 1280, 720), Color(0.015, 0.023, 0.027, 0.94))
 		_text(Vector2(95, 196), "R O N A L D ' S   /   T H E   L A S T   B I R T H D A Y", 13, gold)
 		_text(Vector2(90, 308), "You made it outside." if game.phase == "won" else "The party never ends.", 53, ink, title_font)
-		_text(Vector2(96, 359), "Behind you, a birthday song begins again." if game.phase == "won" else "Keep the beam on him. Run when you need to look away.", 20, muted)
+		_text(Vector2(96, 359), "Behind you, a birthday song begins again." if game.phase == "won" else "Stay out of his sight, and never hide in one place too long.", 20, muted)
 		_text(Vector2(96, 448), "TIME  %02d:%02d     /     FUSES  %d / 3" % [int(game.elapsed) / 60, int(game.elapsed) % 60, game.fuses], 14, gold)
 		_text(Vector2(96, 533), "ENTER  Play again       ESC  Quit", 17, ink)
 	if menu_mode == "pause" or menu_mode == "options_pause":

@@ -1,0 +1,26 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://systems/core/sandbox/sandbox.gd" id="1_sandbox"]
+[ext_resource type="Script" path="res://systems/core/director.gd" id="2_director"]
+[ext_resource type="Script" path="res://systems/hiding/hiding_stub.gd" id="3_hiding"]
+[ext_resource type="Script" path="res://systems/senses/senses_stub.gd" id="4_senses"]
+[ext_resource type="Script" path="res://systems/ruleset/ruleset_system.gd" id="5_ruleset"]
+[ext_resource type="Script" path="res://systems/roaming/roaming_stub.gd" id="6_roaming"]
+
+[node name="RulesetTest" type="Node3D"]
+script = ExtResource("1_sandbox")
+
+[node name="Director" type="Node" parent="."]
+script = ExtResource("2_director")
+
+[node name="Hiding" type="Node" parent="Director"]
+script = ExtResource("3_hiding")
+
+[node name="Senses" type="Node" parent="Director"]
+script = ExtResource("4_senses")
+
+[node name="Ruleset" type="Node" parent="Director"]
+script = ExtResource("5_ruleset")
+
+[node name="Roaming" type="Node" parent="Director"]
+script = ExtResource("6_roaming")

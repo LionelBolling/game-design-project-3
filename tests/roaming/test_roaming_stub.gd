@@ -46,3 +46,30 @@ func test_patrol_ignores_the_target_and_walks_its_own_route() -> void:
 	_tick(1.0)
 	var first_point := roaming.patrol_points[0]
 	assert_lt(board.enemy_position.distance_to(first_point), first_point.length())
+
+
+func test_dormant_ronald_stays_still() -> void:
+	board.writer = Blackboard.ANY
+	board.ronald_mode = BoardTypes.Mode.DORMANT
+	board.target_position = Vector3(5, 0, 0) # a waking Ronald would walk here
+	board.move_speed = 2.0
+	_tick(1.0)
+	assert_eq(board.enemy_position, Vector3.ZERO)
+
+
+func test_pose_walks_to_the_pose_point_and_reports_seated() -> void:
+	board.writer = Blackboard.ANY
+	board.ronald_mode = BoardTypes.Mode.POSE
+	board.move_speed = 100.0
+	_tick(1.0)
+	assert_eq(board.enemy_position, roaming.pose_point)
+	assert_true(board.at_target)
+
+
+func test_never_reports_an_unreachable_target() -> void:
+	board.writer = Blackboard.ANY
+	board.ronald_mode = BoardTypes.Mode.CHASE
+	board.target_position = Vector3(3, 0, 0)
+	board.move_speed = 1.0
+	_tick(0.5)
+	assert_false(board.target_unreachable)
