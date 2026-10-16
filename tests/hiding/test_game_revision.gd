@@ -49,6 +49,20 @@ func test_continuous_beam_triggers_one_pounce_and_hiding_breaks_charge() -> void
 	assert_false(bool(ronald.call("charge_light_attack", false, false, 0.1)))
 	assert_eq(float(ronald.get("beam_exposure")), 0.0)
 
+func test_locked_player_drains_battery_once_without_moving() -> void:
+	var player: CharacterBody3D = PlayerScript.new()
+	add_child_autofree(player)
+	player.set_physics_process(false)
+	player.set("control_enabled", true)
+	player.set("movement_locked", true)
+	player.call("set_flashlight", true)
+	player.velocity = Vector3.ONE
+	var start: Vector3 = player.position
+	player.call("_physics_process", 1.0)
+	assert_almost_eq(float(player.get("battery")), 98.32, 0.001)
+	assert_eq(player.velocity, Vector3.ZERO)
+	assert_eq(player.position, start)
+
 func test_battery_drains_twice_as_fast_and_clamps_at_zero() -> void:
 	var player: CharacterBody3D = autofree(CharacterBody3D.new())
 	player.set_script(PlayerScript)

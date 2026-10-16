@@ -677,14 +677,6 @@ func interact() -> void:
 				say("The entrance is sealed. Follow the blinking lights back to the ball pit.", 6)
 		"exit":
 			say("The entrance is sealed. Find the emergency fuses." if not power_on else "Follow the blinking lights to the ball pit.")
-				objective = "Reach the west entrance"
-				sound("power")
-				say("The door has power. Go.", 5)
-		"exit":
-			if power_on:
-				at_exit = true # the Ruleset ends the run next frame
-			else:
-				say("The magnetic lock has no power. Find the emergency fuses.")
 	_find_interaction()
 
 func _find_maze_interaction() -> void:
@@ -796,13 +788,11 @@ func finish(escaped: bool) -> void:
 	horror_feedback.stop()
 	message_time = 0
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	if escaped and world.has_method("set_powered"):
 	if escaped:
 		horror_events.clear()
-		var tween := create_tween()
-		tween.tween_property(world.exit_door, "rotation:y", -1.2, 1.5)
-		sound("power")
-	elif escaped:
+		if world.has_method("set_powered"):
+			var tween: Tween = create_tween()
+			tween.tween_property(world.exit_door, "rotation:y", -1.2, 1.5)
 		sound("power")
 	else:
 		hud.lens_material.set_shader_parameter("danger", 0.0)
@@ -917,7 +907,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				if phase == "intro" and not get_tree().paused:
 					finish_intro()
 	if phase in ["play", "maze"] and not get_tree().paused:
-	if phase == "play" and not get_tree().paused:
 		if timeout_scene.camera_locked:
 			return
 		if event.is_action_pressed("interact"):
@@ -929,8 +918,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			replace_cell()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(hud) and phase in ["intro", "play", "depth", "maze"]:
-	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(hud) and phase in ["intro", "play", "grapple", "caught"]:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and is_instance_valid(hud) and phase in ["intro", "play", "depth", "maze", "grapple", "caught"]:
 		pause_game(true)
 
 func _exit_tree() -> void:
