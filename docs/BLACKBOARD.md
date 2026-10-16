@@ -1,10 +1,10 @@
 # Blackboard contract
 
-**Version:** v0.2 **DRAFT** · **Date:** 2026-10-14 · v0.2 adds the Ruleset interview's values (proposal P-002 in `DECISIONS.md`, **not yet signed**)
+**Version:** v0.2 · **Date:** 2026-10-16 · v0.2 adds the Ruleset's values (P-002 in `DECISIONS.md`)
 
 These are the only values that pass between systems. Four people and their agents build against them in parallel, so **nobody changes them casually**. In code, this table is `Blackboard.OWNERS` and the properties in `systems/core/blackboard.gd`; `tests/core/test_blackboard.gd` fails if the two drift apart.
 
-**Status:** DRAFT until all four owners sign off (`DECISIONS.md` P-001 for v0.1, P-002 for the v0.2 additions). Each owner should expect to change their own values after their interview. That's what the change protocol below is for.
+**Status:** in use; no sign-offs needed (D-024). Expect values to change as systems get built: that's what "Changing the contract" below is for.
 
 ## Rules
 

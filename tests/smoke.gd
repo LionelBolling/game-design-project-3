@@ -103,14 +103,18 @@ func run() -> void:
 	check(game.player.camera.position.y < 1.1, "Player eye height fits the tables")
 	check(game.player.flashlight_on, "Opening automatically turns on flashlight")
 	check(game.player.hand.position.distance_to(game.player.hand_home) < 0.01, "Flashlight settles in hand")
-	check(game.stalker.clown != null and game.stalker.animation.is_playing(), "Clown model and imported animation load")
+	# The animation stays paused until he moves (the walk cycle follows his steps).
+	check(game.stalker.clown != null and game.stalker.animation != null and not game.stalker.animation.get_animation_list().is_empty(), "Clown model and imported animation load")
 	game.player.position = Vector3(-30, 0.12, -20)
-	game.stalker.awaken()
-	game.stalker.grace = 0
+	check(not game.stalker.active, "The clown sleeps until the first fuse")
+	game.fuses = 1 # the Ruleset wakes him at the first fuse
+	await frames(3)
+	check(game.stalker.active, "The first fuse wakes the clown")
 	var patrol_start: Vector3 = game.stalker.position
 	await frames(90)
 	check(game.stalker.position.distance_to(patrol_start) > 0.5, "Awakened clown patrols the map")
-	game.stalker.active = false
+	game.stalker.active = false # out of play while the smoke test walks the map
+	game.fuses = 0
 	game.player.position = game.world.SPAWN
 	await key(KEY_F)
 	check(not game.player.flashlight_on, "F switches flashlight off")
@@ -221,24 +225,30 @@ func run() -> void:
 	aim_at(game.items[6].node.global_position)
 	await key(KEY_E)
 	check(game.phase == "won", "Powered exit completes game")
-	game.phase = "play"
-	game.player.control_enabled = true
+	# Escaping ended that run for good, so Ronald's rules get a fresh one.
+	game.restart()
+	await frames(5)
+	game = current_scene
+	game.start_game()
+	game.finish_intro()
+	game.fuses = 1
+	await frames(3)
 	game.player.position = Vector3(0, 0.12, -2)
 	game.player.rotation = Vector3.ZERO
 	game.player.camera.rotation = Vector3.ZERO
 	game.player.pitch = 0
-	game.stalker.position = Vector3(0, 0.12, -4)
-	game.stalker.active = true
-	game.stalker.grace = 0
 	game.player.set_flashlight(true)
-	await frames(4)
-	check(game.stalker.frozen, "Flashlight freezes visible stalker")
-	game.player.set_flashlight(false)
-	await frames(4)
-	check(not game.stalker.frozen, "Stalker resumes when light switches off")
-	game.stalker.position = game.player.position + Vector3(0, 0, -0.5)
-	await frames(4)
-	check(game.phase == "dead", "Stalker contact triggers failure")
+	game.stalker.position = Vector3(0, 0.12, -4)
+	var board: Blackboard = game.hiding_director.board
+	await frames(6)
+	check(not game.stalker.frozen and board.ronald_mode == BoardTypes.Mode.CATCH, "Seen up close in the beam: no freeze, the stare starts")
+	await frames(60)
+	check(not game.player.control_enabled and game.phase == "play", "The stare holds the player")
+	for i in 120:
+		if game.phase != "play":
+			break
+		await physics_frame
+	check(game.phase == "caught" or game.phase == "dead", "The sprint after the stare ends the run")
 	game.restart()
 	await frames(5)
 	check(current_scene.phase == "home" and current_scene.fuses == 0, "Restart clears progress and returns home")

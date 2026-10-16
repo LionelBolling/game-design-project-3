@@ -848,7 +848,7 @@ The ways this is most likely to break for a player, each pinned by a test in the
   	assert_eq(reveal.global_position, Vector3(3, 0, -2))
   ```
 
-- [x] **12. Into the main game** · branch `ruleset/12-f5-hookup` · **changed 2026-10-16 (D-023):** instead of a new `systems/core/main.tscn`, the F5 game (`scenes/main.tscn`) runs the board, with the real Ruleset and stand-ins for Senses and Roaming (`scripts/legacy_*.gd`). Rickey chose this so the rules drive Ronald in F5 and on the web now. `project.godot` is unchanged.
+- [x] **12. Into the main game** · branch `ruleset/enemy-ruleset` · **changed 2026-10-16 (D-023):** instead of a new `systems/core/main.tscn`, the F5 game (`scenes/main.tscn`) runs the board, with the real Ruleset and stand-ins for Senses and Roaming (`scripts/legacy_*.gd`). Rickey chose this so the rules drive Ronald in F5 and on the web now. `project.godot` is unchanged.
       Test: `tests/core/test_f5_ruleset.gd` (the four systems in order, Ronald asleep until the first fuse, seen → chase → stare → CAUGHT, the powered exit wins, the exit needs the breaker), plus `test_legacy_hiding.gd`, `test_legacy_senses.gd`, `test_legacy_roaming.gd` and `test_stalker_driven.gd`.
       Done when: F5 plays with Ronald following the rules; full suite green.
 

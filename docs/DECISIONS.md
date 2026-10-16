@@ -50,15 +50,11 @@ The team prefers branch work. Each change gets a short-lived branch cut from `ma
 - [ ] Aiden (Senses)
 
 **P-002 · 2026-10-14 · Rickey · Contract v0.2: what the Ruleset interview needs**
-From `systems/ruleset/SYSTEM.md` §6. Needs a yes from every owner named below before Rickey changes the board.
+From `systems/ruleset/SYSTEM.md` §6. **Adopted 2026-10-16** with no sign-offs (D-024).
 - **`BoardTypes.Mode` gains five modes (eight in all):** `DORMANT` (not active yet; Roaming keeps his body hidden and still), `POSE` (frozen on a bench like a statue), `SEEK` (walking to the player's leaked hiding spot after "I see you"), `CAMP` (waiting at the ball-pit rim) and `CATCH` (the stare, then the sprint). In `DORMANT` and `POSE`, Roaming ignores `target_position` (as in `PATROL`); in `POSE`, `at_target` is true once he's seated.
-- **New Hiding values:** `fuses_collected: int` (0–3) and `breaker_on: bool`, written by Hiding because the player does the picking up. Read by the Ruleset (wake Ronald at the first fuse; escaping needs the breaker) and by display code (HUD, lights). *Needs Lionel's yes.*
-- **New Roaming value:** `target_unreachable: bool`, true when Ronald can't reach `target_position` and went to the nearest reachable point instead (the ball pit). Read by the Ruleset (switch to CAMP). *Needs Naomi's yes.*
-- **A rule, not a value:** Hiding locks the player's controls while `ronald_mode == CATCH`. *Needs Lionel's yes.*
-- [ ] Lionel (Hiding)
-- [ ] Naomi (Roaming)
-- [ ] Aiden (Senses: reads the new modes)
-- [ ] Rickey (Ruleset)
+- **New Hiding values:** `fuses_collected: int` (0–3) and `breaker_on: bool`, written by Hiding because the player does the picking up. Read by the Ruleset (wake Ronald at the first fuse; escaping needs the breaker) and by display code (HUD, lights).
+- **New Roaming value:** `target_unreachable: bool`, true when Ronald can't reach `target_position` and went to the nearest reachable point instead (the ball pit). Read by the Ruleset (switch to CAMP).
+- **A rule, not a value:** Hiding locks the player's controls while `ronald_mode == CATCH`.
 
 ## Open questions
 
@@ -94,5 +90,5 @@ The demo's freeze-in-the-beam rule is dropped. Whether the flashlight exists is 
 **D-022 · 2026-10-14 · Rickey (Ruleset interview) · Opening and ending**
 Keep the demo's opening (waking up in the ball pit). When the player escapes, a short non-interactive reveal: the lights come on and a real man in a cheap clown suit stands where Ronald was. Needs a second character model; who makes it is open. Answers GAME_SPEC Q7. *Affects:* Naomi and Aiden (the model), Rickey (game flow).
 
-**D-023 · 2026-10-16 · Rickey · The F5 game runs the Ruleset (supersedes D-005 for the mock)**
-Ronald in the F5 game and the web build now does what the Ruleset says. `scripts/game.gd`'s Director holds `LegacyHiding` (Lionel's `HidingSystem` plus the game's fuses, breaker and exit), `LegacySenses` and `LegacyRoaming` (stand-ins built on the mock), and the real `RulesetSystem`; the run ends on the board's `game_state`. The mock Ronald's own brain stays in `stalker.gd` but is off while `driven`, so the flashlight freeze and the 6 s beam pounce from D-013 to D-018 no longer happen (D-021). Lionel's cutscenes, voice, chase music and catch leap stay as presentation. The mock is no longer reference only: change it in a PR reviewed by whoever owns that behavior. *Affects:* everyone; Lionel reviews the updated `tests/hiding/test_main_hiding.gd`; Aiden and Naomi replace the stand-ins with their systems; the smoke test's checks for the old brain need updating.
+**D-023 · 2026-10-16 · Rickey · The F5 game runs the Ruleset**
+Ronald in the F5 game and the web build now does what the Ruleset says. `scripts/game.gd`'s Director holds `LegacyHiding` (Lionel's `HidingSystem` plus the game's fuses, breaker and exit), `LegacySenses` and `LegacyRoaming` (stand-ins built on the mock), and the real `RulesetSystem`; the run ends on the board's `game_state`. The mock Ronald's own brain stays in `stalker.gd` but is off while `driven`, so the flashlight freeze and the 6 s beam pounce from D-013 to D-018 no longer happen (D-021). Lionel's cutscenes, voice, chase music and catch leap stay as presentation. *Affects:* everyone; Lionel reviews the updated `tests/hiding/test_main_hiding.gd`; Aiden and Naomi replace the stand-ins with their systems; the smoke test's checks for the old brain are updated to the rules.
