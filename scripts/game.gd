@@ -6,6 +6,7 @@ const HUDScript = preload("res://scripts/hud.gd")
 const StalkerScript = preload("res://scripts/stalker.gd")
 const DepthScript = preload("res://scripts/ball_depth.gd")
 const MazeScript = preload("res://scripts/tube_maze.gd")
+const TransitionScript = preload("res://scripts/transition_fx.gd")
 
 var player: CharacterBody3D
 var world: Node3D
@@ -36,6 +37,9 @@ var loading_time := 0.0
 var depth_loops := 0
 var maze_kind := ""
 var maze_color := ""
+var transition_fx: Node3D
+var loading_origin := Vector3.ZERO
+var loading_swapped := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -50,6 +54,10 @@ func _ready() -> void:
 	player.position = world.SPAWN
 	player.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(player)
+	transition_fx = Node3D.new()
+	transition_fx.set_script(TransitionScript)
+	add_child(transition_fx)
+	transition_fx.setup(player.camera)
 	stalker = Node3D.new()
 	stalker.set_script(StalkerScript)
 	stalker.player = player
@@ -72,7 +80,7 @@ func _ready() -> void:
 	print("RONALD'S: %d source meshes -> %d static batches; %d Blender balls -> 1 MultiMesh." % [world.source_mesh_count, world.batch_count, world.ball_count])
 
 func _bind_inputs() -> void:
-	var bindings := {"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D, "sprint": KEY_SHIFT, "jump": KEY_SPACE, "flashlight": KEY_F, "interact": KEY_E, "reload_cell": KEY_R}
+	var bindings := {"move_forward": KEY_W, "move_back": KEY_S, "move_left": KEY_A, "move_right": KEY_D, "sprint": KEY_SHIFT, "jump": KEY_SPACE, "swim_down": KEY_CTRL, "flashlight": KEY_F, "interact": KEY_E, "reload_cell": KEY_R}
 	for action in bindings:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
@@ -232,15 +240,25 @@ func _process(delta: float) -> void:
 			_start_loading("depth")
 	elif phase == "loading":
 		loading_time += delta
-		if loading_time >= 2.6:
+		_animate_transition()
+		if loading_to == "depth" and loading_time >= 1.35 and not loading_swapped:
+			_swap_to_depth()
+		if loading_to == "maze" and loading_time >= 5.55 and not loading_swapped:
+			_swap_to_maze()
+		if loading_time >= (2.6 if loading_to == "depth" else 6.4):
 			_finish_loading()
 	elif phase == "depth":
 		elapsed += delta
-		if player.position.y < -56.2:
+		if player.position.y < -56.0:
 			depth_loops += 1
 			player.position.y = -0.8
-			player.velocity.y = -3.0
+			player.velocity.y = 0.0
 			say("The balls fold back above you. Find the green light.", 4)
+		elif player.position.y > -0.05:
+			depth_loops += 1
+			player.position.y = -55.4
+			player.velocity.y = 0.0
+			say("The top becomes the bottom. The green light grows brighter.", 4)
 		if player.position.y < -49.8 and player.position.y > -55.5 and player.position.x < -12.1 and absf(player.position.z + 17.0) < 2.2:
 			_start_loading("maze")
 	elif phase == "maze":
@@ -264,12 +282,17 @@ func _start_loading(destination: String) -> void:
 		return
 	loading_to = destination
 	loading_time = 0.0
+	loading_swapped = false
+	loading_origin = player.position
 	phase = "loading"
 	player.control_enabled = false
 	player.velocity = Vector3.ZERO
+	player.collision_mask = 0
 	prompt = ""
 	message_time = 0
-	sound("breath" if destination == "depth" else "sting")
+	transition_fx.begin(destination)
+	if destination == "maze":
+		sound("sting")
 	hud.queue_redraw()
 
 func skip_to_depth() -> void:
@@ -280,37 +303,82 @@ func skip_to_depth() -> void:
 	power_on = true
 	if world.has_method("set_powered"):
 		world.set_powered(true)
+	player.position = Vector3(0, 0.1, -13.2)
+	player.camera.position = Vector3(0, 0.98, 0)
+	player.camera.rotation = Vector3.ZERO
+	player.pitch = 0.0
+	player.hand.show()
+	player.set_flashlight(true)
 	_start_loading("depth")
 
-func _finish_loading() -> void:
+func _animate_transition() -> void:
+	transition_fx.animate(loading_time)
 	if loading_to == "depth":
-		world.queue_free()
-		stalker.active = false
-		stalker.hide()
-		for item in items:
-			(item.node as Node3D).hide()
-		var depth := Node3D.new()
-		depth.set_script(DepthScript)
-		add_child(depth)
-		world = depth
-		player.position = Vector3(0, -0.8, -13.2)
-		player.rotation.y = PI / 2
-		player.velocity = Vector3.ZERO
-		player.fall_speed_limit = 9.0
-		phase = "depth"
-		objective = "Follow the green light through the deep pit"
-		say("The pit goes deeper. A green light waits below.", 5)
-	else:
-		world.queue_free()
-		var maze := Node3D.new()
-		maze.set_script(MazeScript)
-		add_child(maze)
-		world = maze
-		player.position = MazeScript.SPAWN
-		player.rotation.y = 0.0
-		player.pitch = 0.45
+		if not loading_swapped:
+			player.position.y = lerpf(loading_origin.y, -1.3, clampf(loading_time / 1.35, 0.0, 1.0))
+		else:
+			player.position.y = lerpf(-1.3, -3.4, clampf((loading_time - 1.35) / 1.25, 0.0, 1.0))
+		player.pitch = lerpf(0.0, -0.38, sin(clampf(loading_time / 2.6, 0.0, 1.0) * PI))
 		player.camera.rotation.x = player.pitch
-		player.velocity = Vector3.ZERO
+	else:
+		if not loading_swapped:
+			var face_out := clampf(loading_time / 0.4, 0.0, 1.0)
+			player.rotation.y = lerp_angle(player.rotation.y, -PI / 2, face_out)
+			player.pitch = lerpf(player.pitch, 0.1 if loading_time < 4.3 else 0.45, 0.1)
+			player.camera.rotation.x = player.pitch
+			if loading_time >= 5.0:
+				player.position.x = lerpf(loading_origin.x, loading_origin.x - 0.8, clampf((loading_time - 5.0) / 0.55, 0.0, 1.0))
+		else:
+			player.position.y = lerpf(3.8, MazeScript.SPAWN.y, clampf((loading_time - 5.55) / 0.85, 0.0, 1.0))
+			player.pitch = lerpf(0.3, 0.45, clampf((loading_time - 5.55) / 0.85, 0.0, 1.0))
+			player.camera.rotation.x = player.pitch
+
+func _swap_to_depth() -> void:
+	loading_swapped = true
+	world.queue_free()
+	stalker.active = false
+	stalker.hide()
+	for item in items:
+		(item.node as Node3D).hide()
+	var depth := Node3D.new()
+	depth.set_script(DepthScript)
+	add_child(depth)
+	world = depth
+	player.position = Vector3(0, -1.3, -13.2)
+	player.rotation.y = PI / 2
+	player.velocity = Vector3.ZERO
+
+func _swap_to_maze() -> void:
+	loading_swapped = true
+	world.queue_free()
+	var maze := Node3D.new()
+	maze.set_script(MazeScript)
+	add_child(maze)
+	world = maze
+	player.position = MazeScript.SPAWN + Vector3(0, 3.65, 0)
+	player.rotation.y = 0.0
+	player.pitch = 0.3
+	player.camera.rotation.x = player.pitch
+	player.velocity = Vector3.ZERO
+
+func _finish_loading() -> void:
+	if not loading_swapped:
+		if loading_to == "depth":
+			_swap_to_depth()
+		else:
+			_swap_to_maze()
+	transition_fx.end()
+	player.collision_mask = 1
+	player.velocity = Vector3.ZERO
+	if loading_to == "depth":
+		player.position.y = -3.4
+		player.swimming = true
+		phase = "depth"
+		objective = "Swim toward the green tube"
+		say("Swim with Space and Ctrl. The green light waits below.", 5)
+	else:
+		player.position = MazeScript.SPAWN
+		player.swimming = false
 		player.fall_speed_limit = 100.0
 		phase = "maze"
 		objective = "Find the keys and activate five circuits"

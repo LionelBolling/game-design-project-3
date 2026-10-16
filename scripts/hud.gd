@@ -82,8 +82,6 @@ func _draw() -> void:
 			_text(Vector2(640 - width / 2, 440), game.prompt, 16)
 		if game.phase == "play" and game.stalker.active and game.stalker.frozen:
 			_text(Vector2(546, 391), "KEEP HIM IN THE LIGHT", 12, gold)
-	elif game.phase == "loading":
-		_draw_loading()
 	if game.phase in ["won", "dead"]:
 		draw_rect(Rect2(0, 0, 1280, 720), Color(0.015, 0.023, 0.027, 0.94))
 		_text(Vector2(95, 196), "R O N A L D ' S   /   T H E   L A S T   B I R T H D A Y", 13, gold)
@@ -98,28 +96,6 @@ func _draw() -> void:
 		_text(Vector2(51, 155), "%d FPS  /  %.1f ms  /  %s" % [Engine.get_frames_per_second(), Performance.get_monitor(Performance.TIME_PROCESS) * 1000, "LOW" if game.low_quality else "STANDARD"], 14)
 		_text(Vector2(51, 180), "Draw calls: %d   |   Objects: %d" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)], 13, muted)
 		_text(Vector2(51, 205), "F3  Toggle shadows / render scale", 13, gold)
-
-func _draw_loading() -> void:
-	draw_rect(Rect2(0, 0, 1280, 720), Color("071016"))
-	var progress := clampf(game.loading_time / 2.6, 0.0, 1.0)
-	var sinking: bool = game.loading_to == "depth"
-	var center := Vector2(640, lerpf(260, 750, progress) if sinking else lerpf(180, 550, progress))
-	for row in 6:
-		for column in 15:
-			var offset := sin(float(row * 13 + column * 7) + game.loading_time * 2.5) * 7.0
-			var at := Vector2(200 + column * 63, 470 + row * 38 + offset)
-			var colors := [Color("a53a39"), Color("bc9c38"), Color("3d679b")]
-			draw_circle(at, 28, colors[(row + column) % 3])
-	draw_circle(center + Vector2(0, -38), 19, Color("ad896e"))
-	draw_rect(Rect2(center + Vector2(-24, -19), Vector2(48, 67)), Color("475657"))
-	draw_line(center + Vector2(-18, 0), center + Vector2(-48, 34), Color("ad896e"), 11)
-	draw_line(center + Vector2(18, 0), center + Vector2(43, 41), Color("ad896e"), 11)
-	if not sinking:
-		draw_circle(Vector2(640, 475), 102, Color(0.23, 0.7, 0.36, 0.27))
-	_text(Vector2(74, 106), "THE PIT KEEPS GOING" if sinking else "INTO THE TUBES", 39, ink, title_font)
-	_text(Vector2(76, 146), "SINKING INTO ACT 1.5" if sinking else "FALLING INTO ACT 2", 15, gold)
-	draw_rect(Rect2(76, 639, 1128, 8), Color("263b40"))
-	draw_rect(Rect2(76, 639, 1128 * progress, 8), gold)
 
 func _process(delta: float) -> void:
 	draw_clock += delta

@@ -4,6 +4,7 @@ signal flashlight_changed(enabled: bool)
 
 const WALK_SPEED := 2.5
 const RUN_SPEED := 4.2
+const SWIM_SPEED := 3.2
 const BATTERY_DRAIN := 0.84
 var camera: Camera3D
 var hand: Node3D
@@ -23,6 +24,7 @@ var toggle_cooldown := 0.0
 var beam_time := 0.0
 var hand_home := Vector3(0.26, -0.24, -0.42)
 var fall_speed_limit := 100.0
+var swimming := false
 
 func _ready() -> void:
 	name = "Player"
@@ -183,17 +185,21 @@ func _physics_process(delta: float) -> void:
 		# Gentle low-battery instability, never a full-screen strobe.
 		lamp.light_energy = 3.8 if battery > 18 else 2.6 + sin(beam_time * 17) * 0.3
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var direction := global_basis * Vector3(input.x, 0, input.y)
+	var direction := (camera.global_basis if swimming else global_basis) * Vector3(input.x, 0, input.y)
 	var speed := RUN_SPEED if Input.is_action_pressed("sprint") else WALK_SPEED
-	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 16)
-	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 16)
-	var was_on_floor := is_on_floor()
-	if not was_on_floor:
-		velocity.y = maxf(-fall_speed_limit, velocity.y - 19.0 * delta)
+	if swimming:
+		direction.y += Input.get_action_strength("jump") - Input.get_action_strength("swim_down")
+		velocity = velocity.move_toward(direction.normalized() * (SWIM_SPEED if not Input.is_action_pressed("sprint") else RUN_SPEED), delta * 12.0)
 	else:
-		velocity.y = -0.1
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = 5.0
+		velocity.x = move_toward(velocity.x, direction.x * speed, delta * 16)
+		velocity.z = move_toward(velocity.z, direction.z * speed, delta * 16)
+		var was_on_floor := is_on_floor()
+		if not was_on_floor:
+			velocity.y = maxf(-fall_speed_limit, velocity.y - 19.0 * delta)
+		else:
+			velocity.y = -0.1
+		if Input.is_action_just_pressed("jump") and is_on_floor():
+			velocity.y = 5.0
 	move_and_slide()
 	var moving := Vector2(velocity.x, velocity.z).length() > 0.3 and is_on_floor()
 	if moving:

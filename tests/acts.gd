@@ -33,6 +33,14 @@ func run() -> void:
 	check(game.phase == "loading" and game.loading_to == "depth", "Power activates pit transition")
 	await create_timer(2.8).timeout
 	check(game.phase == "depth" and game.player.control_enabled, "Act 1.5 loads and movement resumes")
+	check(game.player.swimming and absf(game.player.velocity.y) < 0.01, "Player stops sinking when control returns")
+	var settled_height: float = game.player.position.y
+	await frames(12)
+	check(absf(game.player.position.y - settled_height) < 0.05, "Player stays at the same depth without swim input")
+	Input.action_press("jump")
+	await frames(16)
+	Input.action_release("jump")
+	check(game.player.position.y > settled_height + 0.05 and game.player.velocity.y > 0.5, "Space swims upward")
 	check(is_equal_approx(game.world.RIGHT - game.world.LEFT, 31.0) and is_equal_approx(game.world.FRONT - game.world.BACK, 14.5) and is_equal_approx(game.world.DEPTH, 56.0), "Deep pit matches footprint and fifty player heights")
 	var near_ball: Vector3 = game.world.ball_origins[1000]
 	var before_ball: Vector3 = game.world.ball_positions[1000]
@@ -47,10 +55,20 @@ func run() -> void:
 	await frames(3)
 	check(game.depth_loops == 1 and game.player.position.y > -2, "Deep pit wraps from bottom to top")
 	check(game.world.tube_light.light_energy > initial_green_light + 0.3, "Green tube light brightens after each loop")
+	var before_upward_loop: int = game.depth_loops
+	var before_upward_light: float = game.world.tube_light.light_energy
+	game.player.position = Vector3(0, -0.02, -13.2)
+	await frames(3)
+	check(game.depth_loops == before_upward_loop + 1 and game.player.position.y < -54.0, "Swimming out the top wraps to the bottom")
+	check(game.world.tube_light.light_energy > before_upward_light + 0.3, "Upward loop brightens the green light")
 	game.player.position = Vector3(-13.0, -52.5, -17.0)
 	await frames(3)
 	check(game.phase == "loading" and game.loading_to == "maze", "Green side tube begins animated maze loading")
-	await create_timer(2.8).timeout
+	await create_timer(1.0).timeout
+	check(game.phase == "loading" and game.transition_fx.shark.visible, "Shark reaches the tube in first person")
+	await create_timer(3.6).timeout
+	check(game.phase == "loading" and game.transition_fx.leviathan.visible, "Leviathan rises after shark retreats")
+	await create_timer(2.0).timeout
 	check(game.phase == "maze" and game.player.control_enabled, "Tube maze loads and movement resumes")
 	check(game.world.source_count > 600 and game.world.batch_count < 300, "Supplied tube maze is imported and batched")
 	var ray := PhysicsRayQueryParameters3D.create(Vector3(30.8, 7.0, -24.0), Vector3(30.8, 3.0, -24.0), 1)

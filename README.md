@@ -12,12 +12,13 @@ Import `project.godot` in Godot, let the GLB/audio assets import, then press **F
 
 The rebuilt map uses the new Blender diner: a large play place, dining booths, kitchen, cold storage, and a back hall leading to the restrooms. Charcoal and cream dominate the rooms, with red and gold accents, dust particles, and dim overhead fixtures. Walk out through the gap in the ball pit rim. Collect three emergency fuses from a booth, the kitchen, and cold storage, then restore the breaker. The ball pit remains solid until then. After power returns, follow the blinking lights back to the pit to sink into Act 1.5. After the first fuse, the animated clown roams the map and chases you around obstacles when you get close. Keep it in the flashlight beam to stop it.
 
-Act 1.5 keeps the first pit's 31 by 14.5 metre footprint and extends it 56 metres downward, or fifty player heights. Its batched balls shift and settle as the player moves through them. Steer toward the green tube on the lower left. Its light starts dim and brightens each time falling past the bottom returns you to the top. The sinking and tube entry animations cover the transitions. In Act 2, the elevated maze follows the [supplied top-down tube layout](<Reference photos/tube maze top down layout.png>). Use **E** at the entrance climb to enter the tubes. The keys and levers are inside the connected tube network at their marked locations. Find the red, blue, yellow, and green keys to unlock their matching doors, and pull each colored lever to light its door and central indicator. Find the black key and use it on the lock in the circle room to activate the fifth circuit. All five circuits open the final door.
+Act 1.5 keeps the first pit's 31 by 14.5 metre footprint and extends it 56 metres downward, or fifty player heights. Its batched balls shift and settle as the player moves through them. Control returns after a first-person sinking sequence, and the player stays at that depth until they swim. Steer toward the green tube on the lower left. Its light starts dim and brightens whenever swimming above the top returns you to the bottom, or descending below the bottom returns you to the top. At the tube, a shark tries to bite through the opening, retreats upward, and a leviathan breaches 1.5 seconds later. A ball flies into the tube and knocks the player into Act 2. Both transitions remain in the first-person game view with no loading overlay. In Act 2, the elevated maze follows the [supplied top-down tube layout](<Reference photos/tube maze top down layout.png>). Use **E** at the entrance climb to enter the tubes. The keys and levers are inside the connected tube network at their marked locations. Find the red, blue, yellow, and green keys to unlock their matching doors, and pull each colored lever to light its door and central indicator. Find the black key and use it on the lock in the circle room to activate the fifth circuit. All five circuits open the final door.
 
 | Control | Action |
 |---|---|
 | WASD / Mouse | Walk / look |
 | Shift / Space | Run / jump |
+| Space / Ctrl in Act 1.5 | Swim up / swim down |
 | **F** | Toggle flashlight |
 | **R** | Replace battery using a spare cell |
 | E | Pick up / operate / open |
@@ -59,7 +60,7 @@ Use F1 while playing to inspect performance on your machine. The visual check re
 
 ### Web export
 
-Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, the GUT addon, and unused audio. Keep `docs/index.pck` below 100,000,000 bytes; this build is **15,406,656 bytes**. The packaged data includes the supplied soundtrack, nightmare ambience, and maze model.
+Export the playable Web build to `docs/` with `godot --headless --path . --export-release Web docs/index.html`. The preset excludes reference photos, build output, tests, reviews, the GUT addon, and unused audio. Keep `docs/index.pck` below 100,000,000 bytes; this build is **15,413,676 bytes**. The packaged data includes the supplied soundtrack, nightmare ambience, and maze model.
 
 ### Checks
 

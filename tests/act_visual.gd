@@ -18,6 +18,12 @@ func run() -> void:
 	game.hud.show_menu("options_home")
 	await capture("act-options")
 	game.skip_to_depth()
+	await create_timer(0.4).timeout
+	await capture("act-depth-start")
+	await create_timer(0.5).timeout
+	await capture("act-depth-sinking")
+	await create_timer(0.5).timeout
+	await capture("act-depth-swap")
 	await create_timer(2.8).timeout
 	game.player.position = Vector3(-6, -49, -17)
 	game.player.camera.look_at(Vector3(-14.1, -52.6, -17))
@@ -26,10 +32,15 @@ func run() -> void:
 	game.depth_loops = 3
 	await create_timer(0.1).timeout
 	await capture("act-depth-bright")
+	game.player.position = Vector3(-13.0, -52.5, -17.0)
 	game._start_loading("maze")
-	await create_timer(1.4).timeout
-	await capture("act-maze-loading")
-	await create_timer(1.4).timeout
+	await create_timer(1.0).timeout
+	await capture("act-maze-shark")
+	await create_timer(3.6).timeout
+	await capture("act-maze-leviathan")
+	await create_timer(0.85).timeout
+	await capture("act-maze-ball")
+	await create_timer(1.05).timeout
 	game.player.position = Vector3(0, 0.15, 28)
 	game.player.camera.look_at(Vector3(0, 5, 25))
 	game.player.pitch = game.player.camera.rotation.x
