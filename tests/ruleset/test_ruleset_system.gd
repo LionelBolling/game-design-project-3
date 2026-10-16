@@ -34,3 +34,16 @@ func test_runs_under_the_director_with_the_other_three_stubs() -> void:
 		director.step(1.0 / 60.0)
 	assert_eq(director.board.game_state, BoardTypes.Game.PLAYING)
 	assert_eq(director.board.ronald_mode, BoardTypes.Mode.DORMANT, "no fuses picked up yet")
+
+
+func test_end_screens_can_be_left_to_the_game() -> void:
+	var system := RulesetSystem.new()
+	system.end_screens = false
+	add_child_autofree(system)
+	assert_null(system.game_flow, "a game with its own end screens gets no GameFlow")
+	assert_not_null(system.cue_player)
+
+
+func test_end_screens_are_on_by_default() -> void:
+	var system: RulesetSystem = add_child_autofree(RulesetSystem.new())
+	assert_not_null(system.game_flow)

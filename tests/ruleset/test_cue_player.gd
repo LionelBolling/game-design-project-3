@@ -35,3 +35,22 @@ func test_the_ruleset_honks_when_a_chase_starts() -> void:
 	board.writer = system.system_id
 	system.tick(board, 0.1)
 	assert_eq(system.cue_player.last_played, &"honk")
+
+
+func test_a_cue_with_no_sound_is_silent_not_an_error() -> void:
+	var cues: CuePlayer = add_child_autofree(CuePlayer.new())
+	cues.sounds[&"whisper"] = null # a game that voices the whisper itself
+	cues.play(&"whisper")
+	assert_eq(cues.last_played, &"whisper")
+	assert_false(cues._whisper.playing)
+	assert_false(cues._player.playing)
+
+
+func test_a_silent_whisper_is_fine_with_a_camera_in_the_scene() -> void:
+	var camera: Camera3D = add_child_autofree(Camera3D.new())
+	camera.make_current()
+	var cues: CuePlayer = add_child_autofree(CuePlayer.new())
+	cues.sounds[&"whisper"] = null
+	cues.play(&"whisper")
+	assert_eq(cues.last_played, &"whisper")
+	assert_false(cues._whisper.playing)

@@ -3,12 +3,15 @@ extends SimSystem
 ## Enemy Ruleset (Rickey): decides what Ronald does. See systems/ruleset/SYSTEM.md.
 
 @export var tuning: RonaldTuning = preload("res://systems/ruleset/ronald_tuning.tres")
+## Off in a game that draws its own caught and escaped screens (the F5 game).
+@export var end_screens := true
 
 var rules: RonaldRules
 ## Plays the honk, whisper and scream. Created in _ready(), so it's null in
 ## tests that never add the system to the tree.
 var cue_player: CuePlayer
-## The caught and escaped screens and the reveal. Also created in _ready().
+## The caught and escaped screens and the reveal. Also created in _ready(),
+## unless end_screens is off.
 var game_flow: GameFlow
 
 
@@ -19,8 +22,9 @@ func _init() -> void:
 func _ready() -> void:
 	cue_player = CuePlayer.new()
 	add_child(cue_player)
-	game_flow = GameFlow.new()
-	add_child(game_flow)
+	if end_screens:
+		game_flow = GameFlow.new()
+		add_child(game_flow)
 
 
 func setup(board: Blackboard) -> void:
