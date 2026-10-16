@@ -40,6 +40,9 @@ The first sandbox run showed Ronald seeing the player on frame one: Senses read 
 **D-012 · 2026-10-14 · Rickey · A branch per change, PRs into `main` (supersedes D-004)**
 The team prefers branch work. Each change gets a short-lived branch cut from `main` (`<system>/<NN>-<slug>`), merged through a PR once the suite passes and the game runs. Nobody commits to `main` directly; no stacked PRs. Contract and `systems/core/` changes need Rickey's approval. The web export is never committed on feature branches (binary conflicts): whoever merges a player-visible change re-exports from `main` on a `web/<date>-export` branch. *Affects:* everyone (`AGENTS.md` Rules 6 and 7, `docs/WORKFLOW.md`).
 
+**D-024 · 2026-10-16 · Rickey · No team process rules (supersedes D-005, and the sign-offs in P-001)**
+Everyone was working their own way, so the process rules are gone: no folder ownership limits, the mock isn't reference only, board changes need no sign-off (P-001 and later proposals count as adopted), and interviewing and planning before code are optional. Kept: talk through the board, tests pass before merging, a branch and PR per change into `main`, the web export rules, Godot 4 syntax. *Affects:* everyone (`AGENTS.md`, `docs/WORKFLOW.md`, `docs/BLACKBOARD.md`).
+
 ## Proposed (need sign-off)
 
 **P-001 · 2026-10-09 · Rickey · Blackboard contract v0.1**

@@ -19,31 +19,29 @@ This is the **canonical** instruction file for every AI agent on this repo. Code
 
 1. [`docs/PROGRESS.md`](docs/PROGRESS.md): what's on `main`, each system's status, handoff notes from other agents.
 2. [`docs/BLACKBOARD.md`](docs/BLACKBOARD.md): the contract, meaning every shared value, its owner and its readers.
-3. Your system's `systems/<system>/SYSTEM.md` and `PLAN.md` (if it exists).
+3. The `systems/<system>/SYSTEM.md` (and `PLAN.md`, if it exists) for the system you're changing.
 4. The parts of [`docs/GAME_SPEC.md`](docs/GAME_SPEC.md) and [`docs/ART.md`](docs/ART.md) your task touches.
 
 First session, or unsure how systems connect: read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Process and copy-paste prompts: [`docs/WORKFLOW.md`](docs/WORKFLOW.md). Why things are the way they are: [`docs/DECISIONS.md`](docs/DECISIONS.md). Sources: [`docs/reference/`](docs/reference/).
 
-## Rule 2: Know whose system you're in
+## Rule 2: Know who to ask
 
-- If it isn't clear which teammate you're working for, **ask** before editing.
-- Edit only that owner's files: `systems/<system>/`, `tests/<system>/`, and **their own section** of `docs/PROGRESS.md`. Rickey owns both `systems/ruleset/` and `systems/core/`.
-- **Shared files are Rickey's:** `systems/core/` (blackboard, Director, sandbox), `project.godot`, `export_presets.cfg`, and the shared docs in `docs/`. Anyone else proposes a change to him.
-- **Aiden's mock game** (`scripts/`, `scenes/`, `shaders/`, `tools/`, `tests/smoke.gd`, `tests/visual.gd`) is **reference only**. Copy what you need into your own system folder; don't edit the mock. The assets (`Blender models/`, `audio/`, `Reference photos/`) are Aiden's: instance them, don't change them.
+- The table above says who leads each system. Anyone can change any file; there are no folder limits or sign-offs (D-024). When you change someone else's system, say so in your PR so they see it.
+- If it isn't clear which teammate you're working for, **ask**.
+- **Aiden's mock game** (`scripts/`, `scenes/`, `shaders/`, `tools/`, `tests/smoke.gd`, `tests/visual.gd`) is the game that Run Project (F5) starts and the web build. Change it like any other code, in a PR.
+- The assets (`Blender models/`, `audio/`, `Reference photos/`) are Aiden's: instance them, and ask him before changing them.
 
 ## Rule 3: Talk only through the blackboard
 
 - Systems **never** call each other's methods, connect to each other's signals, or `get_node()` into each other's scenes. The only thing a system knows about another is the values it writes on the board.
 - Read any value. Write **only** the values `BLACKBOARD.md` lists for your system. The board refuses any other write and prints an error.
-- Need a value that isn't on the board, or a different meaning for one? **Stop and tell the human.** That's a contract change (`BLACKBOARD.md`, "Changing the contract"). Never edit `systems/core/blackboard.gd`, `board_types.gd` or `BLACKBOARD.md` on your own.
-- **Build against stubs, never against a teammate's code.** Every system has a stub on `main` that writes believable values. If you need the stub to behave differently, describe it to the human.
+- Need a value that isn't on the board, or a different meaning for one? Change the board in the same PR: `BLACKBOARD.md`, `blackboard.gd`, `board_types.gd` if an enum changes, the affected stubs, and their tests (`BLACKBOARD.md`, "Changing the contract"). Say so in the PR description.
+- **Build against stubs, not against a teammate's unfinished code.** Every system has a stub on `main` that writes believable values.
 
-## Rule 4: Interview, plan, then build in steps
+## Rule 4: Build in small steps
 
-- **First session on a system:** interview the owner using the questions in their `SYSTEM.md` (§5). **One question at a time**, multiple choice, recommended option first. Record each answer in `SYSTEM.md` §6 as you go.
-- Then write `systems/<system>/PLAN.md` from the template in `WORKFLOW.md`. **No system code until the owner approves `PLAN.md`.**
-- Build **one plan step at a time**: write the test first, implement, run the full suite, tick the box in `PLAN.md`, commit on your branch, then **stop and report**.
-- Don't add features that aren't in the approved plan. Put ideas in `PLAN.md` under "Ideas".
+- Build in small, testable steps: write the test first, implement, run the full suite, commit.
+- The interview questions in each `SYSTEM.md` §5 and the `PLAN.md` template in `WORKFLOW.md` are there if they help; they're optional.
 
 ## Rule 5: Test before claiming done
 
@@ -66,14 +64,13 @@ First session, or unsure how systems connect: read [`docs/ARCHITECTURE.md`](docs
   git checkout main && git pull
   git checkout -b <system>/<NN>-<slug>
   ```
-  `NN` is the `PLAN.md` step number, for example `hiding/02-hide-timer` (the interview and plan go on `<system>/00-plan`). Shared work uses `core/<slug>`, `docs/<slug>` or `web/<slug>`.
+  For example `hiding/hide-timer`. Shared work uses `core/<slug>`, `docs/<slug>` or `web/<slug>`.
 - Commit small and often on your branch. Messages: `<system>: <what changed>` (for example `hiding: add hide timer`).
 - **Before opening a PR:** bring in what merged since you branched (`git pull origin main`), run the full suite, and run the game or your test scene with your change.
-- **One PR per branch, into `main`.** Say what changed, what you tested, and what to try. Merge when those checks pass. A PR that changes the contract or `systems/core/` needs Rickey's approval first.
-- **No stacked PRs** (a PR whose base is another unmerged branch), and never branch off a teammate's branch. If you need someone's unmerged work, keep building against their stub.
+- **One PR per branch, into `main`.** Say what changed, what you tested, and what to try. Merge when those checks pass.
 - **After the merge:** delete the branch, `git checkout main && git pull`, and run the game once.
 - **Ask the human before pushing, opening a PR or merging.** Never push to `main` directly, and never force-push.
-- A merge conflict in a file you don't own: stop and tell the human. In the shared logs (`PROGRESS.md`, `DECISIONS.md`), keep both sides.
+- Merge conflicts: in the shared logs (`PROGRESS.md`, `DECISIONS.md`), keep both sides. If you can't tell which side is right, ask the human.
 
 ## Rule 7: Web export
 
@@ -92,7 +89,7 @@ These rules came from Aiden's earlier `AGENTS.md`.
 ## Rule 8: Leave a trail
 
 The other agents don't share your memory. They share the repo.
-- At the end of every session (or when asked), update **your owner's section** of `docs/PROGRESS.md`: Status, Updated (date and agent), Done, Next, Needs from others, **Handoff notes**.
+- At the end of every session (or when asked), update the section of `docs/PROGRESS.md` for the system you worked on: Status, Updated (date and agent), Done, Next, Needs from others, **Handoff notes**.
 - Log decisions others might question in `docs/DECISIONS.md` (append; never rewrite old entries).
 - Tuning numbers live in your `SYSTEM.md` §6 ("Answers"). Change them there in the same commit as the code.
 
@@ -108,17 +105,15 @@ The other agents don't share your memory. They share the repo.
 
 - Deleting, renaming or moving files
 - Installing addons, plugins or packages
-- Changing `project.godot`, `export_presets.cfg`, `.gitignore` or anything in `systems/core/`
-- Any contract change
+- Changing `project.godot`, `export_presets.cfg` or `.gitignore`
 - `git push`, opening or merging a PR, rebase or reset
 - Reading or editing outside this project
 
 ## Never
 
 - Commit `.godot/`, `build/`, credentials or personal editor state
-- Edit another owner's files or their section of `PROGRESS.md`
 - Make a system depend on another system's code instead of the board
-- Commit to `main` directly, stack PRs, or merge anything that breaks `main`
+- Commit to `main` directly, or merge anything that breaks `main`
 - Skip Rule 5
 
 ## Agent-specific notes

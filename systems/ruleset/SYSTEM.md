@@ -1,6 +1,6 @@
 # Enemy Ruleset (Rickey)
 
-> **Agents:** read `AGENTS.md` first, then this whole file. If §6 "Answers" is empty, start with the interview in §5. Don't plan or write code before it's done.
+> **Agents:** read `AGENTS.md` first, then this whole file. The interview in §5 is optional: use it if the owner wants help deciding.
 
 ## 1. What the GDD says
 
